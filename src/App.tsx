@@ -9,6 +9,7 @@ import About from "./pages/About";
 import ContactUs from "./pages/ContactUs";
 import Careers from "./pages/Careers";
 import Login from "./pages/Login";
+import Signup from "./pages/Signup";
 import Dashboard from "./pages/Dashboard";
 import DashboardDemo from "./pages/DashboardDemo";
 import AgentBuilder from "./pages/AgentBuilder";
@@ -29,6 +30,7 @@ const App = () => (
           <Route path="/contact-us" element={<ContactUs />} />
           <Route path="/careers" element={<Careers />} />
           <Route path="/login" element={<Login />} />
+          <Route path="/signup" element={<Signup />} />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/dashboard-demo" element={<DashboardDemo />} />
           <Route path="/dashboard/agents/new" element={<AgentBuilder />} />
