@@ -1,14 +1,14 @@
 import express, { Express, Request, Response } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
-import { connectDB } from './config/db';
-import { errorHandler } from './middleware/errorHandler';
+import { connectDB } from './config/db.js';
+import { errorHandler } from './middleware/errorHandler.js';
 
 // Routes
-import authRoutes from './routes/auth';
-import agentRoutes from './routes/agents';
-import callRoutes from './routes/calls';
-import contactRoutes from './routes/contacts';
+import authRoutes from './routes/auth.js';
+import agentRoutes from './routes/agents.js';
+import callRoutes from './routes/calls.js';
+import contactRoutes from './routes/contacts.js';
 
 dotenv.config();
 
