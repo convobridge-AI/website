@@ -6,10 +6,7 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { toast } from "sonner";
-import { useNavigate } from "react-router-dom";
-import { apiClient } from "@/lib/apiClient";
-
+import { useAuth } from "@/contexts/AuthContext";
 
 const schema = z.object({
   name: z.string().min(2, "Name is required"),
@@ -21,7 +18,7 @@ const schema = z.object({
 export default function Signup() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const navigate = useNavigate();
+  const { signup } = useAuth();
   const form = useForm({
     resolver: zodResolver(schema),
     mode: "onChange",
@@ -31,12 +28,9 @@ export default function Signup() {
   const onSubmit = async (values: any) => {
     setLoading(true);
     try {
-      await apiClient.signup(values.email, values.password, values.name, values.company);
-      toast.success("Signup successful! Redirecting...");
-      setTimeout(() => navigate("/dashboard"), 1200);
+      await signup(values.email, values.password, values.name, values.company);
     } catch (err: any) {
-      const message = err.response?.data?.error || "Signup failed. Please try again.";
-      toast.error(message);
+      console.error('Signup error:', err);
     } finally {
       setLoading(false);
     }

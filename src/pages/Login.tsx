@@ -6,10 +6,7 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { toast } from "sonner";
-import { useNavigate } from "react-router-dom";
-import { apiClient } from "@/lib/apiClient";
-
+import { useAuth } from "@/contexts/AuthContext";
 
 const schema = z.object({
   email: z.string().email(),
@@ -19,7 +16,7 @@ const schema = z.object({
 export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const navigate = useNavigate();
+  const { login } = useAuth();
   const form = useForm({
     resolver: zodResolver(schema),
     mode: "onChange",
@@ -29,12 +26,9 @@ export default function Login() {
   const onSubmit = async (values: any) => {
     setLoading(true);
     try {
-      await apiClient.login(values.email, values.password);
-      toast.success("Login successful! Redirecting...");
-      setTimeout(() => navigate("/dashboard"), 1200);
+      await login(values.email, values.password);
     } catch (err: any) {
-      const message = err.response?.data?.error || "Login failed. Please try again.";
-      toast.error(message);
+      console.error('Login error:', err);
     } finally {
       setLoading(false);
     }

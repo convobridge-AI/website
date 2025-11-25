@@ -155,6 +155,37 @@ class APIClient {
     return response.data;
   }
 
+  // Leads
+  async getLeads(query?: any) {
+    const response = await this.client.get('/leads', { params: query });
+    return response.data;
+  }
+
+  async getLead(id: string) {
+    const response = await this.client.get(`/leads/${id}`);
+    return response.data;
+  }
+
+  async createLead(leadData: any) {
+    const response = await this.client.post('/leads', leadData);
+    return response.data;
+  }
+
+  async updateLead(id: string, leadData: any) {
+    const response = await this.client.put(`/leads/${id}`, leadData);
+    return response.data;
+  }
+
+  async deleteLead(id: string) {
+    const response = await this.client.delete(`/leads/${id}`);
+    return response.data;
+  }
+
+  async getLeadStats() {
+    const response = await this.client.get('/leads/stats');
+    return response.data;
+  }
+
   isAuthenticated(): boolean {
     return !!this.token;
   }
