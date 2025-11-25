@@ -1,5 +1,4 @@
 import { useEffect, useState, useRef } from "react";
-import { useInView } from "framer-motion"; // Or simple intersection observer if you prefer no deps
 
 export function AnimatedCounter({ value, suffix = "" }: { value: string; suffix?: string }) {
   const [displayValue, setDisplayValue] = useState(0);

@@ -10,6 +10,7 @@ import agentRoutes from '../backend/routes/agents.js';
 import callRoutes from '../backend/routes/calls.js';
 import contactRoutes from '../backend/routes/contacts.js';
 import contextRoutes from '../backend/routes/context.js';
+import leadRoutes from '../backend/routes/leads.js';
 
 dotenv.config();
 
@@ -37,6 +38,7 @@ app.use('/api/agents', agentRoutes);
 app.use('/api/calls', callRoutes);
 app.use('/api/contacts', contactRoutes);
 app.use('/api/context', contextRoutes);
+app.use('/api/leads', leadRoutes);
 
 // 404 handler
 app.use((req: Request, res: Response) => {
