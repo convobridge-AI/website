@@ -176,6 +176,64 @@ class APIClient {
     return response.data;
   }
 
+  // Agent Deployment
+  async deployAgent(agentId: string) {
+    const response = await this.client.post(`/agents/${agentId}/deploy`);
+    return response.data;
+  }
+
+  // Settings
+  async getSettings() {
+    const response = await this.client.get('/settings');
+    return response.data;
+  }
+
+  async updateSettings(settings: any) {
+    const response = await this.client.put('/settings', settings);
+    return response.data;
+  }
+
+  async regenerateApiKey() {
+    const response = await this.client.post('/settings/regenerate-api-key');
+    return response.data;
+  }
+
+  async connectIntegration(name: string, data: any) {
+    const response = await this.client.post(`/settings/integrations/${name}/connect`, data);
+    return response.data;
+  }
+
+  async disconnectIntegration(name: string) {
+    const response = await this.client.delete(`/settings/integrations/${name}`);
+    return response.data;
+  }
+
+  // Admin
+  async getSystemStats() {
+    const response = await this.client.get('/admin/stats');
+    return response.data;
+  }
+
+  async getAllUsers(query?: any) {
+    const response = await this.client.get('/admin/users', { params: query });
+    return response.data;
+  }
+
+  async updateUser(id: string, data: any) {
+    const response = await this.client.put(`/admin/users/${id}`, data);
+    return response.data;
+  }
+
+  async getAllAgentsAdmin(query?: any) {
+    const response = await this.client.get('/admin/agents', { params: query });
+    return response.data;
+  }
+
+  async getAllCallsAdmin(query?: any) {
+    const response = await this.client.get('/admin/calls', { params: query });
+    return response.data;
+  }
+
   // Leads
   async getLeads(query?: any) {
     const response = await this.client.get('/leads', { params: query });

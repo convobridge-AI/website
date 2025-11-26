@@ -12,6 +12,8 @@ import contactRoutes from '../backend/routes/contacts.js';
 import contextRoutes from '../backend/routes/context.js';
 import leadRoutes from '../backend/routes/leads.js';
 import numbersRoutes from '../backend/routes/numbers.js';
+import settingsRoutes from '../backend/routes/settings.js';
+import adminRoutes from '../backend/routes/admin.js';
 
 dotenv.config();
 
@@ -58,6 +60,8 @@ console.log('🔁 Contacts routes mounted');
 app.use('/api/context', contextRoutes);
 app.use('/api/leads', leadRoutes);
 app.use('/api/admin/numbers', numbersRoutes);
+app.use('/api/settings', settingsRoutes);
+app.use('/api/admin', adminRoutes);
 
 // 404 handler
 app.use((req: Request, res: Response) => {

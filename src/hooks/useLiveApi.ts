@@ -17,9 +17,20 @@ const MIN_PLAYBACK_BUFFER = 0.05; // Minimum 50ms of audio before starting playb
 
 export type ConnectionState = 'idle' | 'connecting' | 'connected' | 'error';
 
+// Map Agent Builder voices to Gemini voice names
+const VOICE_MAP: Record<string, string> = {
+  'aria': 'Aoede',      // Female, warm
+  'guy': 'Puck',        // Male, energetic
+  'jenny': 'Kore',      // Female, professional
+  'chris': 'Charon',    // Male, deep
+};
+
 interface UseLiveApiOptions {
   systemPrompt?: string;
   testScenario?: string;
+  voice?: string;        // Agent voice ID (aria, guy, jenny, chris)
+  context?: string;      // Agent context/knowledge base
+  agentName?: string;    // Agent name for personalized greeting
 }
 
 interface UseLiveApiReturn {
@@ -174,12 +185,22 @@ export function useLiveApi(): UseLiveApiReturn {
 
       const ai = new GoogleGenAI({ apiKey });
 
-      // Build system instruction with agent config
-      let systemInstruction = options?.systemPrompt || 'You are ConvoBridge, a helpful AI calling agent. Be concise, friendly, and professional in your responses. Help users with their inquiries.';
+      // Build comprehensive system instruction with agent config
+      const agentNameStr = options?.agentName || 'ConvoBridge';
+      let systemInstruction = `You are ${agentNameStr}, an AI calling agent for ConvoBridge.\n\n${options?.systemPrompt || 'Be concise, friendly, and professional in your responses. Help users with their inquiries.'}`;
       
+      // Add context/knowledge base if provided
+      if (options?.context && options.context.trim()) {
+        systemInstruction += `\n\nContext and Knowledge Base:\n${options.context}`;
+      }
+      
+      // Add test scenario if provided
       if (options?.testScenario) {
         systemInstruction += `\n\nTest Scenario: The user is calling with the following scenario: ${options.testScenario}. Respond appropriately to this caller type.`;
       }
+
+      // Map voice to Gemini voice name
+      const geminiVoice = options?.voice ? (VOICE_MAP[options.voice] || 'Kore') : 'Kore';
 
       // Connect to Gemini Live
       const sessionPromise = ai.live.connect({
@@ -189,7 +210,7 @@ export function useLiveApi(): UseLiveApiReturn {
           speechConfig: {
             voiceConfig: {
               prebuiltVoiceConfig: {
-                voiceName: 'Kore',
+                voiceName: geminiVoice,
               },
             },
           },

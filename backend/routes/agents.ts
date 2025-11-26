@@ -1,5 +1,5 @@
 import express from 'express';
-import { getAgents, getAgent, createAgent, updateAgent, deleteAgent } from '../controllers/agentController.js';
+import { getAgents, getAgent, createAgent, updateAgent, deleteAgent, deployAgent } from '../controllers/agentController.js';
 import { authenticateJWT } from '../middleware/auth.js';
 
 const router = express.Router();
@@ -18,5 +18,8 @@ router.put('/:id', authenticateJWT, updateAgent);
 
 // Protected: delete agent
 router.delete('/:id', authenticateJWT, deleteAgent);
+
+// Protected: deploy agent to Asterisk
+router.post('/:id/deploy', authenticateJWT, deployAgent);
 
 export default router;

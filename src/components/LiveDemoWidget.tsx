@@ -8,10 +8,11 @@ type WidgetProps = {
   agentConfig?: {
     name: string;
     voice: string;
+    systemPrompt?: string;
+    context?: string;
     languages: string[];
     personality: string;
     template: string;
-    systemPrompt?: string;
   };
   testScenario?: string;
   onCallEnd?: (duration: number, transcript: string) => void;
@@ -58,7 +59,10 @@ export function LiveDemoWidget({ variant = "floating", agentConfig, testScenario
     setCallTranscript("");
     connect({
       systemPrompt: agentConfig?.systemPrompt || undefined,
-      testScenario: testScenario || undefined
+      testScenario: testScenario || undefined,
+      voice: agentConfig?.voice || undefined,
+      context: agentConfig?.context || undefined,
+      agentName: agentConfig?.name || undefined,
     });
   };
 

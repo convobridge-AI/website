@@ -16,6 +16,8 @@ import Dashboard from "./pages/Dashboard";
 import DashboardDemo from "./pages/DashboardDemo";
 import AgentBuilder from "./pages/AgentBuilder";
 import Admin from "./pages/Admin";
+import AdminEnhanced from "./pages/AdminEnhanced";
+import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -57,6 +59,22 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <Admin />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin-enhanced"
+              element={
+                <ProtectedRoute>
+                  <AdminEnhanced />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/settings"
+              element={
+                <ProtectedRoute>
+                  <Settings />
                 </ProtectedRoute>
               }
             />

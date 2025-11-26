@@ -188,27 +188,18 @@ export default function AgentBuilder() {
     try {
       setIsDeploying(true);
       
-      // Update the agent with final configuration
-      await apiClient.updateAgent(agentId, {
-        name: agentName,
-        type: selectedTemplate.toLowerCase().replace(" agent", ""),
-        systemPrompt,
-        voice: selectedVoice,
-        languages,
-        personality: personality < 33 ? "formal" : personality < 67 ? "balanced" : "friendly",
-        generatedContext: agentContext,
-        isDeployed: false, // Save as draft
-        integrations: Object.keys(connectedIntegrations)
-          .filter(k => connectedIntegrations[k as keyof typeof connectedIntegrations])
-          .map(k => ({ name: k, connected: true }))
-      });
+      // Deploy the agent via API (this assigns Asterisk extension)
+      const response = await apiClient.deployAgent(agentId);
 
       toast({
-        title: "Agent saved as draft",
-        description: `${agentName} has been saved. You can deploy it from the dashboard when ready.`,
+        title: "Agent deployed successfully!",
+        description: `Extension ${response.deployment.extension} assigned. Your agent is now live.`,
       });
 
-      // Redirect to dashboard or agent list
+      // Show deployment details
+      console.log('Deployment config:', response.deployment);
+      
+      // Redirect to dashboard
       setTimeout(() => {
         window.location.href = "/dashboard";
       }, 2000);
@@ -712,10 +703,11 @@ export default function AgentBuilder() {
                           agentConfig={{
                             name: agentName,
                             voice: selectedVoice,
+                            systemPrompt: systemPrompt,
+                            context: agentContext,
                             languages: languages,
                             personality: personality < 33 ? "Formal" : personality < 67 ? "Balanced" : "Friendly",
                             template: selectedTemplate,
-                            systemPrompt: systemPrompt
                           }}
                           testScenario={testScenario}
                           onCallEnd={(duration, transcript) => {
