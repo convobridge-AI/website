@@ -24,6 +24,18 @@ const agentSchema = new Schema({
     type: String,
     default: '',
   },
+  contextSources: {
+    files: [{
+      fileName: { type: String },
+      content: { type: String },
+      addedAt: { type: Date, default: Date.now }
+    }],
+    websites: [{
+      url: { type: String },
+      content: { type: String },
+      addedAt: { type: Date, default: Date.now }
+    }]
+  },
   voice: {
     type: String,
     default: 'alloy',

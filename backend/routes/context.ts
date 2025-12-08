@@ -1,6 +1,6 @@
 import express, { Router } from 'express';
 import multer from 'multer';
-import { processFileForContext, saveContext, getContext, crawlWebsiteForContext } from '../controllers/contextController.js';
+import { processFileForContext, saveContext, getContext, crawlWebsiteForContext, clearContext } from '../controllers/contextController.js';
 import { authenticateJWT } from '../middleware/auth.js';
 
 const router: Router = express.Router();
@@ -8,7 +8,7 @@ const router: Router = express.Router();
 // Configure multer for file uploads (in memory)
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit
   fileFilter: (req, file, cb) => {
     const allowedMimes = ['application/pdf', 'text/plain'];
     if (allowedMimes.includes(file.mimetype)) {
@@ -30,5 +30,8 @@ router.post('/save', authenticateJWT, saveContext);
 
 // Get context for an agent
 router.get('/:agentId', authenticateJWT, getContext);
+
+// Clear context (specific or all)
+router.delete('/:agentId/clear', authenticateJWT, clearContext);
 
 export default router;

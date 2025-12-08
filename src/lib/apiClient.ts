@@ -176,6 +176,13 @@ class APIClient {
     return response.data;
   }
 
+  async clearContext(agentId: string, type: 'file' | 'website' | 'all', index?: number) {
+    const response = await this.client.delete(`/context/${agentId}/clear`, { 
+      data: { type, index } 
+    });
+    return response.data;
+  }
+
   // Agent Deployment
   async deployAgent(agentId: string) {
     const response = await this.client.post(`/agents/${agentId}/deploy`);
