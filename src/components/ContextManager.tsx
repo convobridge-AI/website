@@ -200,8 +200,8 @@ export function ContextManager({ agentId, onContextSaved }: ContextManagerProps)
   return (
     <div className="space-y-6">
       {/* Instructions */}
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-        <p className="text-sm text-blue-900">
+      <div className="bg-primary/10 border border-primary/20 rounded-lg p-4">
+        <p className="text-sm text-foreground">
           💡 <strong>Tip:</strong> Upload files or crawl your website to extract context. Our AI will summarize and intelligently integrate this knowledge into your agent's responses.
         </p>
       </div>
@@ -235,17 +235,17 @@ export function ContextManager({ agentId, onContextSaved }: ContextManagerProps)
             </label>
           </div>
         ) : (
-          <div className="bg-green-50 border border-green-200 rounded-lg p-4 flex items-center justify-between">
+          <div className="bg-accent/50 border border-accent rounded-lg p-4 flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <Check className="h-5 w-5 text-green-600" />
+              <Check className="h-5 w-5 text-primary" />
               <div>
                 <p className="font-medium text-sm">{fileName}</p>
-                <p className="text-xs text-green-600">Ready to process</p>
+                <p className="text-xs text-primary">Ready to process</p>
               </div>
             </div>
             <button
               onClick={handleClearFile}
-              className="text-green-600 hover:text-green-700"
+              className="text-primary hover:text-primary/80"
               title="Clear file"
             >
               <Trash2 className="h-4 w-4" />
@@ -372,11 +372,11 @@ export function ContextManager({ agentId, onContextSaved }: ContextManagerProps)
 
       {/* Saved Context Status */}
       {savedContext && !generatedContext && (
-        <div className="border border-green-200 bg-green-50 rounded-lg p-4 flex items-start gap-3">
-          <Check className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
+        <div className="border border-primary/30 bg-primary/10 rounded-lg p-4 flex items-start gap-3">
+          <Check className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
           <div>
-            <p className="font-medium text-sm text-green-900">Context Saved</p>
-            <p className="text-xs text-green-700 mt-1">
+            <p className="font-medium text-sm text-foreground">Context Saved</p>
+            <p className="text-xs text-muted-foreground mt-1">
               Your agent has {savedContext.length} characters of context loaded
             </p>
           </div>
