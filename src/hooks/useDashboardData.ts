@@ -8,21 +8,24 @@ export const useDashboardData = () => {
   const [calls, setCalls] = useState<any[]>([]);
   const [agents, setAgents] = useState<any[]>([]);
   const [leads, setLeads] = useState<any[]>([]);
+  const [numbers, setNumbers] = useState<any[]>([]);
 
   const fetchData = async () => {
     try {
       setLoading(true);
-      const [callStatsRes, callsRes, agentsRes, leadsRes] = await Promise.all([
+      const [callStatsRes, callsRes, agentsRes, leadsRes, numbersRes] = await Promise.all([
         apiClient.getCallStats().catch(() => ({ stats: null })),
         apiClient.getCalls({ limit: 10 }).catch(() => ({ calls: [] })),
         apiClient.getAgents().catch(() => ({ agents: [] })),
         apiClient.getLeads({ limit: 10 }).catch(() => ({ leads: [] })),
+        apiClient.getNumbers().catch(() => ({ numbers: [] })),
       ]);
 
       setStats(callStatsRes.stats);
       setCalls(callsRes.calls || []);
       setAgents(agentsRes.agents || []);
       setLeads(leadsRes.leads || []);
+      setNumbers(numbersRes.numbers || []);
     } catch (error: any) {
       console.error('Dashboard data fetch error:', error);
       toast.error('Failed to load dashboard data');
@@ -41,6 +44,7 @@ export const useDashboardData = () => {
     calls,
     agents,
     leads,
+    numbers,
     refresh: fetchData,
   };
 };

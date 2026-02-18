@@ -36,7 +36,7 @@ export default function Dashboard() {
   const [userName, setUserName] = useState("User");
 
   // Fetch real data from MongoDB via API
-  const { stats, calls, agents, leads, loading } = useDashboardData();
+  const { stats, calls, agents, leads, numbers, loading } = useDashboardData();
 
   // Get user info on mount
   useEffect(() => {
@@ -184,16 +184,18 @@ export default function Dashboard() {
             ))}
           </div>
 
-          <div className="bg-card border rounded-lg overflow-hidden" style={{ animationDelay: "200ms" }}>
-            <div className="px-6 py-4 border-b flex items-center justify-between">
-              <h2 className="text-h3 font-semibold">Recent Calls</h2>
-              <Button variant="outline" size="sm" onClick={() => setActiveTab("calls")}>
-                View All
-                <ChevronRight className="ml-2 h-4 w-4" />
-              </Button>
-            </div>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="lg:col-span-2 bg-card border rounded-lg overflow-hidden animate-fade-in-up" style={{ animationDelay: "200ms" }}>
+              <div className="px-6 py-4 border-b flex items-center justify-between">
+                <h2 className="text-h3 font-semibold">Recent Calls</h2>
+                <Button variant="outline" size="sm" onClick={() => setActiveTab("calls")}>
+                  View All
+                  <ChevronRight className="ml-2 h-4 w-4" />
+                </Button>
+              </div>
 
-            <div className="px-6 py-4 border-b bg-muted/30 flex items-center gap-4">
+              {/* Existing search/filter section */}
+              <div className="px-6 py-4 border-b bg-muted/30 flex items-center gap-4">
               <div className="flex-1 relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
@@ -238,7 +240,7 @@ export default function Dashboard() {
                 <tbody className="divide-y">
                   {paginatedCalls.length > 0 ? (
                     paginatedCalls.map((call: any) => (
-                      <tr key={call._id} className="hover:bg-muted/50 transition-colors">
+                      <tr key={call.id} className="hover:bg-muted/50 transition-colors">
                         <td className="px-6 py-4 text-sm text-muted-foreground">{formatTime(call.startedAt)}</td>
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-2">
@@ -315,7 +317,70 @@ export default function Dashboard() {
             )}
           </div>
 
-          <div className="bg-gradient-to-r from-primary/10 to-transparent border border-primary/20 rounded-lg p-8 flex items-center justify-between" style={{ animationDelay: "300ms" }}>
+          <div className="lg:col-span-1 space-y-6 animate-fade-in-up" style={{ animationDelay: "250ms" }}>
+            <div className="bg-card border rounded-lg p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-semibold flex items-center gap-2">
+                  <Phone className="h-4 w-4 text-primary" />
+                  My Numbers
+                </h3>
+                <span className="text-xs font-bold px-2 py-0.5 bg-primary/10 text-primary rounded-full uppercase">
+                  {numbers.length} Active
+                </span>
+              </div>
+              
+              <div className="space-y-3">
+                {numbers.length === 0 ? (
+                  <div className="text-center py-6 border border-dashed rounded-lg bg-muted/20">
+                    <p className="text-xs text-muted-foreground">No numbers assigned</p>
+                  </div>
+                ) : (
+                  numbers.slice(0, 3).map((num: any) => (
+                    <div key={num.id} className="p-3 border rounded-lg hover:border-primary/30 transition-all">
+                      <p className="font-bold text-sm tracking-tighter">{num.phone_number}</p>
+                      <div className="flex items-center justify-between mt-1">
+                        <p className="text-[10px] text-muted-foreground">{num.friendly_name || 'Direct Line'}</p>
+                        <span className="h-1.5 w-1.5 rounded-full bg-success"></span>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+              
+              <Button variant="ghost" className="w-full mt-4 text-xs h-8 text-primary" onClick={() => setActiveTab("settings")}>
+                Request another number
+              </Button>
+            </div>
+
+            <div className="bg-card border rounded-lg p-6">
+              <h3 className="font-semibold mb-4 flex items-center gap-2">
+                <Bot className="h-4 w-4 text-purple-500" />
+                Active Agents
+              </h3>
+              <div className="space-y-3">
+                {agents?.filter(a => a.isActive).slice(0, 2).map((agent: any) => (
+                  <div key={agent.id} className="flex items-center gap-3">
+                    <div className="h-8 w-8 rounded-full bg-purple-500/10 flex items-center justify-center flex-shrink-0">
+                      <Zap className="h-4 w-4 text-purple-500" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium truncate">{agent.name}</p>
+                      <p className="text-[10px] text-muted-foreground uppercase">{agent.type}</p>
+                    </div>
+                  </div>
+                ))}
+                {agents?.filter(a => a.isActive).length === 0 && (
+                  <p className="text-xs text-muted-foreground text-center py-2">No active agents</p>
+                )}
+              </div>
+              <Button variant="outline" className="w-full mt-4 text-xs h-8" onClick={() => setActiveTab("agents")}>
+                Manage All Agents
+              </Button>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-gradient-to-r from-primary/10 to-transparent border border-primary/20 rounded-lg p-8 flex items-center justify-between" style={{ animationDelay: "300ms" }}>
             <div>
               <h3 className="text-h3 font-semibold mb-2 flex items-center gap-2">
                 <Zap className="h-5 w-5 text-primary" />
@@ -418,7 +483,7 @@ export default function Dashboard() {
         <div className="grid gap-4">
           {agents.map((agent: any) => (
             <div
-              key={agent._id}
+              key={agent.id}
               className="bg-card border rounded-lg p-6 hover:border-primary/50 hover:shadow-lg transition-all cursor-pointer group"
             >
               <div className="flex items-start justify-between">
@@ -551,7 +616,7 @@ export default function Dashboard() {
                 </tr>
               ) : paginatedCalls.length > 0 ? (
                 paginatedCalls.map((call: any) => (
-                  <tr key={call._id} className="hover:bg-muted/50 transition-colors">
+                  <tr key={call.id} className="hover:bg-muted/50 transition-colors">
                     <td className="px-6 py-4 text-sm text-muted-foreground">{formatTime(call.startedAt)}</td>
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-2">
@@ -667,7 +732,7 @@ export default function Dashboard() {
               </thead>
               <tbody className="divide-y">
                 {leads.slice(0, 10).map((lead: any) => (
-                  <tr key={lead._id} className="hover:bg-muted/50 transition-colors">
+                  <tr key={lead.id} className="hover:bg-muted/50 transition-colors">
                     <td className="px-6 py-4 text-sm font-medium">{lead.name || '—'}</td>
                     <td className="px-6 py-4 text-sm">{lead.email || '—'}</td>
                     <td className="px-6 py-4 text-sm font-mono">{lead.phone || '—'}</td>
@@ -818,7 +883,7 @@ export default function Dashboard() {
                 <tbody className="divide-y">
                   {agents && agents.length > 0 ? (
                     agents.map((agent: any) => (
-                      <tr key={agent._id} className="hover:bg-muted/50">
+                      <tr key={agent.id} className="hover:bg-muted/50">
                         <td className="px-4 py-3 text-sm font-medium">{agent.name}</td>
                         <td className="px-4 py-3 text-sm">{agent.type}</td>
                         <td className="px-4 py-3 text-sm font-mono">{agent.stats?.totalCalls || 0}</td>

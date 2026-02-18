@@ -46,7 +46,7 @@ export default function Admin() {
     try {
       await apiClient.deleteNumber(id);
       toast({ title: 'Number deleted' });
-      setNumbers((s) => s.filter(n => n._id !== id));
+      setNumbers((s) => s.filter(n => n.id !== id));
     } catch (err) {
       toast({ title: 'Failed to delete', variant: 'destructive' });
     }
@@ -65,13 +65,13 @@ export default function Admin() {
 
         <div className="space-y-2">
           {numbers.map((n) => (
-            <div key={n._id} className="flex items-center justify-between p-3 border rounded">
+            <div key={n.id} className="flex items-center justify-between p-3 border rounded">
               <div>
                 <div className="font-medium">{n.number}</div>
                 <div className="text-xs text-muted-foreground">{n.label || n.provider || (n.available ? 'Available' : 'Unavailable')}</div>
               </div>
               <div className="flex gap-2">
-                <Button variant="outline" size="sm" onClick={() => handleDelete(n._id)}>Delete</Button>
+                <Button variant="outline" size="sm" onClick={() => handleDelete(n.id)}>Delete</Button>
               </div>
             </div>
           ))}
@@ -82,7 +82,7 @@ export default function Admin() {
         <h2 className="font-semibold mb-2">Contact Submissions</h2>
         <div className="space-y-2">
           {contacts.map((c) => (
-            <div key={c._id} className="p-3 border rounded">
+            <div key={c.id} className="p-3 border rounded">
               <div className="flex justify-between">
                 <div>
                   <div className="font-medium">{c.name} • {c.email}</div>

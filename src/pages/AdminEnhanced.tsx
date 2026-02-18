@@ -5,7 +5,7 @@ import { Card } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { apiClient } from '@/lib/apiClient';
 import { useToast } from '@/hooks/use-toast';
-import { Users, Bot, Phone, TrendingUp, Search, Loader2 } from 'lucide-react';
+import { Users, Bot, Phone, TrendingUp, Search, Loader2, Plus, Trash2, Mail } from 'lucide-react';
 
 export default function AdminEnhanced() {
   const { toast } = useToast();
@@ -14,7 +14,11 @@ export default function AdminEnhanced() {
   const [users, setUsers] = useState<any[]>([]);
   const [agents, setAgents] = useState<any[]>([]);
   const [calls, setCalls] = useState<any[]>([]);
+  const [phoneNumbers, setPhoneNumbers] = useState<any[]>([]);
+  const [contacts, setContacts] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [isAddingNumber, setIsAddingNumber] = useState(false);
+  const [newNumber, setNewNumber] = useState({ phone_number: '', friendly_name: '', provider: 'twilio' });
 
   useEffect(() => {
     loadData();
@@ -22,21 +26,48 @@ export default function AdminEnhanced() {
 
   const loadData = async () => {
     try {
-      const [statsRes, usersRes, agentsRes, callsRes] = await Promise.all([
+      const [statsRes, usersRes, agentsRes, callsRes, numbersRes, contactsRes] = await Promise.all([
         apiClient.getSystemStats(),
         apiClient.getAllUsers(),
         apiClient.getAllAgentsAdmin(),
         apiClient.getAllCallsAdmin(),
+        apiClient.getNumbers(),
+        apiClient.getContacts(),
       ]);
 
       setStats(statsRes.stats);
       setUsers(usersRes.users);
       setAgents(agentsRes.agents);
       setCalls(callsRes.calls);
+      setPhoneNumbers(numbersRes.numbers);
+      setContacts(contactsRes.contacts);
     } catch (err) {
       toast({ title: 'Failed to load admin data', variant: 'destructive' });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleAddNumber = async () => {
+    try {
+      await apiClient.createNumber(newNumber);
+      toast({ title: 'Phone number added successfully' });
+      setIsAddingNumber(false);
+      setNewNumber({ phone_number: '', friendly_name: '', provider: 'twilio' });
+      loadData();
+    } catch (err) {
+      toast({ title: 'Failed to add phone number', variant: 'destructive' });
+    }
+  };
+
+  const handleDeleteNumber = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this number?')) return;
+    try {
+      await apiClient.deleteNumber(id);
+      toast({ title: 'Phone number deleted' });
+      loadData();
+    } catch (err) {
+      toast({ title: 'Failed to delete phone number', variant: 'destructive' });
     }
   };
 
@@ -122,6 +153,8 @@ export default function AdminEnhanced() {
           <TabsTrigger value="users">Users</TabsTrigger>
           <TabsTrigger value="agents">Agents</TabsTrigger>
           <TabsTrigger value="calls">Calls</TabsTrigger>
+          <TabsTrigger value="numbers">Phone Numbers</TabsTrigger>
+          <TabsTrigger value="inquiries">Inquiries</TabsTrigger>
         </TabsList>
 
         <TabsContent value="users" className="space-y-4">
@@ -139,7 +172,7 @@ export default function AdminEnhanced() {
 
           <div className="space-y-2">
             {users.map((user) => (
-              <Card key={user._id} className="p-4">
+              <Card key={user.id} className="p-4">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="font-medium">{user.name}</p>
@@ -153,7 +186,7 @@ export default function AdminEnhanced() {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => handleUpdateUser(user._id, { role: user.role === 'admin' ? 'user' : 'admin' })}
+                      onClick={() => handleUpdateUser(user.id, { role: user.role === 'admin' ? 'user' : 'admin' })}
                     >
                       Toggle Admin
                     </Button>
@@ -167,7 +200,7 @@ export default function AdminEnhanced() {
         <TabsContent value="agents" className="space-y-4">
           <div className="space-y-2">
             {agents.map((agent) => (
-              <Card key={agent._id} className="p-4">
+              <Card key={agent.id} className="p-4">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="font-medium">{agent.name}</p>
@@ -190,7 +223,7 @@ export default function AdminEnhanced() {
         <TabsContent value="calls" className="space-y-4">
           <div className="space-y-2">
             {calls.map((call) => (
-              <Card key={call._id} className="p-4">
+              <Card key={call.id} className="p-4">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="font-medium">{call.callerNumber || 'Unknown'}</p>
@@ -210,6 +243,140 @@ export default function AdminEnhanced() {
                 </div>
               </Card>
             ))}
+          </div>
+        </TabsContent>
+
+        <TabsContent value="numbers" className="space-y-4">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-lg font-semibold">Available Phone Numbers</h3>
+            <Button onClick={() => setIsAddingNumber(!isAddingNumber)} variant="outline" size="sm">
+              <Plus className="h-4 w-4 mr-2" />
+              Add New Number
+            </Button>
+          </div>
+
+          {isAddingNumber && (
+            <Card className="p-6 border-primary/20 bg-primary/5 animate-fade-in-up mb-6">
+              <h4 className="font-semibold mb-4">Register New Number</h4>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Phone Number (E.164)</label>
+                  <Input 
+                    placeholder="+1234567890" 
+                    value={newNumber.phone_number} 
+                    onChange={(e) => setNewNumber({...newNumber, phone_number: e.target.value})}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Friendly Name</label>
+                  <Input 
+                    placeholder="Support Line" 
+                    value={newNumber.friendly_name} 
+                    onChange={(e) => setNewNumber({...newNumber, friendly_name: e.target.value})}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Provider</label>
+                  <select 
+                    className="w-full h-10 px-3 border rounded-lg bg-background"
+                    value={newNumber.provider}
+                    onChange={(e) => setNewNumber({...newNumber, provider: e.target.value})}
+                  >
+                    <option value="twilio">Twilio</option>
+                    <option value="plivo">Plivo</option>
+                    <option value="asterisk">Asterisk (Internal)</option>
+                  </select>
+                </div>
+              </div>
+              <div className="flex justify-end gap-2 mt-4">
+                <Button variant="ghost" onClick={() => setIsAddingNumber(false)}>Cancel</Button>
+                <Button onClick={handleAddNumber}>Register Number</Button>
+              </div>
+            </Card>
+          )}
+
+          <div className="space-y-2">
+            {phoneNumbers.length === 0 ? (
+              <div className="text-center py-12 text-muted-foreground border border-dashed rounded-lg">
+                No phone numbers registered in the system.
+              </div>
+            ) : (
+              phoneNumbers.map((num) => (
+                <Card key={num.id} className="p-4 hover:border-primary/30 transition-all">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <p className="font-bold text-lg">{num.phone_number}</p>
+                        <span className={`px-2 py-0.5 rounded-full text-[10px] uppercase font-bold ${
+                          num.status === 'active' ? 'bg-success/10 text-success' : 'bg-orange-500/10 text-orange-500'
+                        }`}>
+                          {num.status}
+                        </span>
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        {num.friendly_name || 'No Label'} • Provider: {num.provider}
+                      </p>
+                    </div>
+                    
+                    <div className="flex items-center gap-4 text-right">
+                      <div>
+                        <p className="text-xs text-muted-foreground uppercase">Assigned To</p>
+                        <p className="text-sm font-medium">
+                          {num.assignment_type === 'unassigned' ? (
+                            <span className="text-muted-foreground italic">Available for users</span>
+                          ) : (
+                            num.assigned_to_id || 'Unknown' 
+                          )}
+                        </p>
+                      </div>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="text-red-500 hover:text-red-600 hover:bg-red-50/50"
+                        onClick={() => handleDeleteNumber(num.id)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </Card>
+              ))
+            )}
+          </div>
+        </TabsContent>
+
+        <TabsContent value="inquiries" className="space-y-4">
+          <div className="space-y-4">
+            {contacts.length === 0 ? (
+              <div className="text-center py-12 text-muted-foreground border border-dashed rounded-lg">
+                No contact form submissions found.
+              </div>
+            ) : (
+              contacts.map((contact) => (
+                <Card key={contact.id} className="p-6 hover:shadow-md transition-all">
+                  <div className="flex justify-between items-start mb-4">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-primary/10 rounded-full">
+                        <Mail className="h-5 w-5 text-primary" />
+                      </div>
+                      <div>
+                        <h4 className="font-bold">{contact.name}</h4>
+                        <p className="text-sm text-muted-foreground">{contact.email} • {contact.company || 'Private'}</p>
+                      </div>
+                    </div>
+                    <span className="text-xs text-muted-foreground">{new Date(contact.createdAt || contact.created_at).toLocaleString()}</span>
+                  </div>
+                  <div className="bg-muted/30 p-4 rounded-lg text-sm italic">
+                    "{contact.message}"
+                  </div>
+                  <div className="mt-4 flex justify-end gap-2">
+                    <Button variant="outline" size="sm" onClick={() => window.location.href = `mailto:${contact.email}`}>
+                      Reply via Email
+                    </Button>
+                  </div>
+                </Card>
+              ))
+            )}
           </div>
         </TabsContent>
       </Tabs>

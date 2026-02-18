@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { apiClient } from '@/lib/apiClient';
+import { supabase } from '@/lib/supabase';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 
@@ -15,6 +15,7 @@ interface AuthContextType {
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
   signup: (email: string, password: string, name: string, company?: string) => Promise<void>;
+  loginWithOAuth: (provider: 'google' | 'github') => Promise<void>;
   logout: () => void;
   isAuthenticated: boolean;
 }
@@ -28,36 +29,99 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     const initAuth = async () => {
-      if (apiClient.isAuthenticated()) {
-        try {
-          const response = await apiClient.getCurrentUser();
-          setUser(response.user);
-        } catch (error) {
-          apiClient.logout();
-        }
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (session?.user) {
+        setUser({
+          id: session.user.id,
+          email: session.user.email || '',
+          name: session.user.user_metadata?.name || session.user.user_metadata?.full_name || session.user.user_metadata?.user_name || 'User',
+          company: session.user.user_metadata?.company || '',
+        });
       }
+      
+      const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+        if (session?.user) {
+          setUser({
+            id: session.user.id,
+            email: session.user.email || '',
+            name: session.user.user_metadata?.name || session.user.user_metadata?.full_name || session.user.user_metadata?.user_name || 'User',
+            company: session.user.user_metadata?.company || '',
+          });
+        } else {
+          setUser(null);
+        }
+      });
+
       setLoading(false);
+      return () => subscription.unsubscribe();
     };
 
     initAuth();
   }, []);
 
+  const loginWithOAuth = async (provider: 'google' | 'github') => {
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider,
+        options: {
+          redirectTo: window.location.origin + '/dashboard',
+        }
+      });
+      if (error) throw error;
+    } catch (err: any) {
+      toast.error(err.message || 'OAuth login failed');
+    }
+  };
+
   const login = async (email: string, password: string) => {
-    const response = await apiClient.login(email, password);
-    setUser(response.user);
-    toast.success('Login successful!');
-    navigate('/dashboard');
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (error) throw error;
+
+    if (data.user) {
+      setUser({
+        id: data.user.id,
+        email: data.user.email || '',
+        name: data.user.user_metadata?.name || '',
+        company: data.user.user_metadata?.company || '',
+      });
+      toast.success('Login successful!');
+      navigate('/dashboard');
+    }
   };
 
   const signup = async (email: string, password: string, name: string, company?: string) => {
-    const response = await apiClient.signup(email, password, name, company);
-    setUser(response.user);
-    toast.success('Account created successfully!');
-    navigate('/dashboard');
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          name,
+          company,
+        },
+      },
+    });
+
+    if (error) throw error;
+
+    if (data.user) {
+      setUser({
+        id: data.user.id,
+        email: data.user.email || '',
+        name: data.user.user_metadata?.name || '',
+        company: data.user.user_metadata?.company || '',
+      });
+      toast.success('Account created successfully!');
+      navigate('/dashboard');
+    }
   };
 
-  const logout = () => {
-    apiClient.logout();
+  const logout = async () => {
+    await supabase.auth.signOut();
     setUser(null);
     toast.info('Logged out successfully');
     navigate('/login');

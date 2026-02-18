@@ -16,7 +16,7 @@ const schema = z.object({
 export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const { login } = useAuth();
+  const { login, loginWithOAuth } = useAuth();
   const form = useForm({
     resolver: zodResolver(schema),
     mode: "onChange",
@@ -145,11 +145,23 @@ export default function Login() {
 
           {/* OAuth Options */}
           <div className="grid grid-cols-2 gap-4">
-            <Button variant="outline" size="lg" className="text-base">
+            <Button 
+              variant="outline" 
+              size="lg" 
+              className="text-base"
+              onClick={() => loginWithOAuth('github')}
+              disabled={loading}
+            >
               <Github className="h-5 w-5 mr-2" />
               GitHub
             </Button>
-            <Button variant="outline" size="lg" className="text-base">
+            <Button 
+              variant="outline" 
+              size="lg" 
+              className="text-base"
+              onClick={() => loginWithOAuth('google')}
+              disabled={loading}
+            >
               <svg className="h-5 w-5 mr-2" viewBox="0 0 24 24">
                 <path
                   fill="currentColor"

@@ -5,7 +5,6 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Slider } from "@/components/ui/slider";
 import { LiveDemoWidget } from "@/components/LiveDemoWidget";
-import { ContextManager } from "@/components/ContextManager";
 import { apiClient } from "@/lib/apiClient";
 import { useToast } from "@/hooks/use-toast";
 
@@ -245,7 +244,7 @@ export default function AgentBuilder() {
             personality: personality < 33 ? "formal" : personality < 67 ? "balanced" : "friendly",
             isDeployed: false
           });
-          setAgentId(response.agent._id);
+          setAgentId(response.agent.id);
         } catch (error: any) {
           toast({
             title: "Error creating draft agent",

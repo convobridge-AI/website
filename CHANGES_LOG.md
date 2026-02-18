@@ -4,13 +4,58 @@
 
 ---
 
-## Latest: Context Feature Upgraded to Gemini 2.5 Flash with Native URL Support
+## Latest: Backend Conversion to Supabase
 
-### Session: Backend SDK Modernization - @google/generative-ai → @google/genai
-**Date**: Current session - Part 2
-**Focus**: Upgrade to modern Gemini 2.5 Flash SDK with native PDF support and native URL context analysis
+### Session: Backend Infrastructure Migration - MongoDB/Express → Supabase
+**Date**: February 18, 2026
+**Focus**: Replace custom Express/MongoDB backend with Supabase Auth and Database (PostgreSQL)
 
 ### Changes Made
+
+#### 1. **Supabase Client Initialization** ✅
+- **Created**: `src/lib/supabase.ts`
+- Initialized Supabase client using `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`.
+- Added environment variable placeholders to `.env.example`.
+
+#### 2. **Authentication Refactoring** ✅
+- **Modified**: `src/contexts/AuthContext.tsx`
+- Replaced custom JWT-based login/signup with `supabase.auth.signInWithPassword` and `supabase.auth.signUp`.
+- Updated user state to include `name` and `company` metadata from Supabase user object.
+- Integrated `onAuthStateChange` for real-time session management.
+
+#### 3. **API Client Overhaul** ✅
+- **Modified**: `src/lib/apiClient.ts`
+- Completely rewrote the `APIClient` class to use Supabase instead of Axios/Express.
+- **Implemented Database Methods**:
+  - `agents`: Mapped to `supabase.from('agents')`
+  - `calls`: Mapped to `supabase.from('calls')`
+  - `leads`: Mapped to `supabase.from('leads')`
+  - `contacts`: Mapped to `supabase.from('contacts')`
+  - `user_settings`: Mapped to `supabase.from('user_settings')`
+- **Simulated/Edge Function Placeholders**:
+  - `processFileForContext`, `crawlWebsiteForContext`, `deployAgent` (now ready for Supabase Edge Functions).
+- Maintained the existing class interface to avoid breaking changes in the frontend components.
+
+#### 4. **Database Schema & Documentation** ✅
+- **Created**: `SUPABASE_SETUP.sql`
+- Detailed SQL script to set up all necessary tables, RLS (Row Level Security) policies, and triggers in Supabase.
+- Tables included: `profiles`, `agents`, `calls`, `leads`, `user_settings`, `contacts`.
+- Included a trigger for automatic profile creation on user signup.
+
+#### 5. **Dependencies** ✅
+- **Installed**: `@supabase/supabase-js`
+- **Updated**: `.env.example` with Supabase configuration keys.
+
+### Benefits
+- ✅ **Zero Infrastructure Management**: No need to maintain a MongoDB instance or Express server.
+- ✅ **Built-in Scalability**: Supabase handles connection pooling and scaling automatically.
+- ✅ **Real-time Capabilities**: Easy to add real-time transcript updates or call notifications.
+- ✅ **Secure by Default**: RLS policies ensure users only access their own data.
+- ✅ **Simpler Frontend**: Direct database access from the browser (with security) reduces middle-man code.
+
+---
+
+## Latest: Context Feature Upgraded to Gemini 2.5 Flash with Native URL Support
 
 #### 1. **Upgraded Backend Gemini SDK** ✅
 
