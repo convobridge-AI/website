@@ -35,9 +35,38 @@ export default function Dashboard() {
   const [callsSearch, setCallsSearch] = useState("");
   const [callsPage, setCallsPage] = useState(1);
   const [userName, setUserName] = useState("User");
+  const [systemPrompt, setSystemPrompt] = useState("");
+  const [isSavingPrompt, setIsSavingPrompt] = useState(false);
 
-  // Fetch real data from MongoDB via API
-  const { stats, calls, agents, leads, loading } = useDashboardData();
+  // Fetch real data from Supabase
+  const { stats, calls, agents, leads, topups, loading, refresh } = useDashboardData();
+
+  // Load system prompt for Nilgiri bot when settings tab is active
+  useEffect(() => {
+    if (activeTab === "settings" && stats?.company?.system_prompt) {
+      setSystemPrompt(stats.company.system_prompt || "");
+    }
+  }, [activeTab, stats]);
+
+  const handleUpdateSystemPrompt = async () => {
+    if (!stats?.company?.id) return;
+    setIsSavingPrompt(true);
+    try {
+      const { data, error } = await supabase
+        .from('companies')
+        .update({ system_prompt: systemPrompt })
+        .eq('id', stats.company.id);
+      
+      if (error) throw error;
+      toast({ title: "System prompt updated successfully" });
+      refresh();
+    } catch (err: any) {
+      console.error("Error updating prompt:", err);
+      toast({ title: "Failed to update system prompt", variant: "destructive" });
+    } finally {
+      setIsSavingPrompt(false);
+    }
+  };
 
   // Get user info on mount
   useEffect(() => {
@@ -641,10 +670,13 @@ export default function Dashboard() {
   const renderLeads = () => (
     <div className="space-y-6 animate-fade-in-up">
       <div className="flex items-center justify-between">
-        <h2 className="text-h2 font-semibold">Leads</h2>
+        <div>
+          <h2 className="text-h2 font-semibold">Leads</h2>
+          <p className="text-sm text-muted-foreground">Captured interest from conversation intelligence</p>
+        </div>
         <Button variant="outline" size="sm">
           <Download className="mr-2 h-4 w-4" />
-          Export
+          Export All
         </Button>
       </div>
 
@@ -653,51 +685,55 @@ export default function Dashboard() {
           <Loader className="h-12 w-12 text-muted-foreground mx-auto animate-spin" />
         </div>
       ) : leads && leads.length > 0 ? (
-        <div className="bg-card border rounded-lg overflow-hidden">
+        <div className="bg-card border rounded-lg overflow-hidden transition-all shadow-sm">
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-muted/50 border-b">
+              <thead className="bg-muted/50 text-[10px] font-bold uppercase tracking-wider text-muted-foreground border-b">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-muted-foreground">Name</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-muted-foreground">Email</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-muted-foreground">Phone</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-muted-foreground">Company</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-muted-foreground">Status</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-muted-foreground">Score</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-muted-foreground">Source</th>
+                  <th className="px-6 py-4 text-left">Captured</th>
+                  <th className="px-6 py-4 text-left">Lead Details</th>
+                  <th className="px-6 py-4 text-left">Status</th>
+                  <th className="px-6 py-4 text-left">Intelligence Summary</th>
+                  <th className="px-6 py-4 text-left">Action</th>
                 </tr>
               </thead>
-              <tbody className="divide-y">
-                {leads.slice(0, 10).map((lead: any) => (
-                  <tr key={lead._id} className="hover:bg-muted/50 transition-colors">
-                    <td className="px-6 py-4 text-sm font-medium">{lead.name || '—'}</td>
-                    <td className="px-6 py-4 text-sm">{lead.email || '—'}</td>
-                    <td className="px-6 py-4 text-sm font-mono">{lead.phone || '—'}</td>
-                    <td className="px-6 py-4 text-sm">{lead.company || '—'}</td>
-                    <td className="px-6 py-4">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${
-                        lead.status === 'new' ? 'bg-blue-500/10 text-blue-600' :
-                        lead.status === 'contacted' ? 'bg-yellow-500/10 text-yellow-600' :
-                        lead.status === 'qualified' ? 'bg-purple-500/10 text-purple-600' :
-                        lead.status === 'converted' ? 'bg-green-500/10 text-green-600' :
-                        lead.status === 'lost' ? 'bg-red-500/10 text-red-600' :
-                        'bg-gray-500/10 text-gray-600'
-                      }`}>
-                        {lead.status || '—'}
-                      </span>
+              <tbody className="divide-y divide-border/60">
+                {leads.map((lead: any) => (
+                  <tr key={lead.id} className="hover:bg-muted/30 transition-colors group">
+                    <td className="px-6 py-4 text-xs text-muted-foreground">
+                      {new Date(lead.created_at).toLocaleDateString()}
                     </td>
                     <td className="px-6 py-4">
-                      <div className="flex items-center gap-2">
-                        <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden w-16">
-                          <div
-                            className="h-full bg-blue-500"
-                            style={{ width: `${(lead.score || 0)}%` }}
-                          ></div>
+                      <div className="flex items-center gap-3">
+                        <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center font-bold text-xs text-primary">
+                          {(lead.name || 'A')[0].toUpperCase()}
                         </div>
-                        <span className="text-sm font-semibold text-xs">{lead.score || 0}</span>
+                        <div>
+                          <p className="text-sm font-semibold">{lead.name || "Anonymous Lead"}</p>
+                          <p className="text-xs text-muted-foreground font-mono">{lead.phone || lead.email || "No contact info"}</p>
+                        </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-sm">{lead.source || '—'}</td>
+                    <td className="px-6 py-4">
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                        lead.status === 'new' ? 'bg-blue-500/10 text-blue-600' :
+                        lead.status === 'qualified' ? 'bg-green-500/10 text-green-600' :
+                        lead.status === 'contacted' ? 'bg-purple-500/10 text-purple-600' :
+                        'bg-gray-500/10 text-gray-600'
+                      }`}>
+                        {lead.status}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 max-w-sm">
+                      <p className="text-xs text-muted-foreground line-clamp-2 italic">
+                        {lead.interest || lead.notes || "Analyzed from call transcript..."}
+                      </p>
+                    </td>
+                    <td className="px-6 py-4">
+                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <MoreVertical className="h-4 w-4" />
+                      </Button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -708,7 +744,11 @@ export default function Dashboard() {
         <div className="bg-card border rounded-lg p-12 text-center">
           <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4 opacity-50" />
           <h3 className="text-h3 font-semibold mb-2">No Leads Yet</h3>
-          <p className="text-muted-foreground">Leads will appear here as calls are converted</p>
+          <p className="text-muted-foreground">Leads will appear here as the AI agent identifies interest during calls.</p>
+        </div>
+      )}
+    </div>
+  );
         </div>
       )}
     </div>
@@ -716,9 +756,21 @@ export default function Dashboard() {
 
   const renderAnalytics = () => (
     <div className="space-y-8 animate-fade-in-up">
-      <div>
-        <h2 className="text-h2 font-semibold mb-2">Analytics & Reports</h2>
-        <p className="text-muted-foreground">Detailed insights into your call performance</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-h2 font-semibold mb-2">Usage & Billing</h2>
+          <p className="text-muted-foreground">Monitor your consumption and credit balance</p>
+        </div>
+        <div className="bg-primary/5 border border-primary/20 rounded-2xl p-6 flex items-center gap-6 backdrop-blur-sm">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-widest text-primary mb-1">Available Credits</p>
+            <p className="text-4xl font-bold text-foreground">${Number(stats?.credits || 0).toFixed(2)}</p>
+          </div>
+          <Button className="h-12 px-6 rounded-xl shadow-lg shadow-primary/20">
+            <Plus className="mr-2 h-5 w-5" />
+            Add Credits
+          </Button>
+        </div>
       </div>
 
       {loading ? (
@@ -729,46 +781,119 @@ export default function Dashboard() {
         </div>
       ) : (
         <>
-          {/* Key Metrics */}
+          {/* Usage Metrics */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="bg-card border rounded-lg p-6">
-              <p className="text-sm text-muted-foreground mb-2">Total Calls</p>
-              <p className="text-3xl font-bold mb-2">{stats?.totalCalls || 0}</p>
-              <p className="text-xs text-green-600">↑ This period</p>
-            </div>
-            <div className="bg-card border rounded-lg p-6">
-              <p className="text-sm text-muted-foreground mb-2">Success Rate</p>
-              <p className="text-3xl font-bold mb-2">{((stats?.successRate || 0) * 100).toFixed(1)}%</p>
-              <div className="h-2 bg-muted rounded-full overflow-hidden">
-                <div className="h-full bg-green-500" style={{ width: `${(stats?.successRate || 0) * 100}%` }}></div>
+            <div className="bg-card border rounded-lg p-6 hover:border-primary/30 transition-all group">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="p-2 bg-blue-500/10 rounded-lg text-blue-600">
+                  <Phone className="h-5 w-5" />
+                </div>
+                <p className="text-sm font-semibold text-muted-foreground">Total Calls</p>
               </div>
+              <p className="text-3xl font-bold mb-1">{stats?.totalCalls || 0}</p>
+              <p className="text-xs text-muted-foreground">Lifetime volume</p>
             </div>
-            <div className="bg-card border rounded-lg p-6">
-              <p className="text-sm text-muted-foreground mb-2">Avg Call Duration</p>
-              <p className="text-3xl font-bold mb-2">{formatDuration(stats?.avgDuration || 0)}</p>
-              <p className="text-xs text-muted-foreground">Across all calls</p>
+            
+            <div className="bg-card border rounded-lg p-6 hover:border-primary/30 transition-all group">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="p-2 bg-purple-500/10 rounded-lg text-purple-600">
+                  <Clock className="h-5 w-5" />
+                </div>
+                <p className="text-sm font-semibold text-muted-foreground">Total Minutes</p>
+              </div>
+              <p className="text-3xl font-bold mb-1">{Math.floor((stats?.totalDuration || 0) / 60)}</p>
+              <p className="text-xs text-muted-foreground">~{((stats?.totalDuration || 0) / 3600).toFixed(1)} hours</p>
             </div>
-            <div className="bg-card border rounded-lg p-6">
-              <p className="text-sm text-muted-foreground mb-2">Active Agents</p>
-              <p className="text-3xl font-bold mb-2">{agents?.filter(a => a.isActive).length || 0}</p>
-              <p className="text-xs text-muted-foreground">Deployed and active</p>
+
+            <div className="bg-card border rounded-lg p-6 hover:border-primary/30 transition-all group">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="p-2 bg-orange-500/10 rounded-lg text-orange-600">
+                  <Zap className="h-5 w-5" />
+                </div>
+                <p className="text-sm font-semibold text-muted-foreground">Total Cost</p>
+              </div>
+              <p className="text-3xl font-bold mb-1">${Number(stats?.totalCost || 0).toFixed(2)}</p>
+              <p className="text-xs text-muted-foreground">Charged to balance</p>
+            </div>
+
+            <div className="bg-card border rounded-lg p-6 hover:border-primary/30 transition-all group">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="p-2 bg-green-500/10 rounded-lg text-green-600">
+                  <TrendingUp className="h-5 w-5" />
+                </div>
+                <p className="text-sm font-semibold text-muted-foreground">Avg Rate</p>
+              </div>
+              <p className="text-3xl font-bold mb-1">${Number(stats?.company?.rate_per_minute || 0.05).toFixed(2)}</p>
+              <p className="text-xs text-muted-foreground">Per minute of talk</p>
             </div>
           </div>
 
-          {/* Call Status Breakdown */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div className="bg-card border rounded-lg p-6">
-              <h3 className="text-h3 font-semibold mb-4">Call Status Distribution</h3>
-              <div className="space-y-3">
-                {[
-                  { status: 'Completed', count: Math.floor((stats?.totalCalls || 0) * 0.75), color: 'bg-green-500' },
-                  { status: 'In Progress', count: Math.floor((stats?.totalCalls || 0) * 0.1), color: 'bg-blue-500' },
-                  { status: 'Missed', count: Math.floor((stats?.totalCalls || 0) * 0.1), color: 'bg-red-500' },
-                  { status: 'Failed', count: Math.floor((stats?.totalCalls || 0) * 0.05), color: 'bg-yellow-500' }
-                ].map((item) => (
-                  <div key={item.status}>
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-sm font-medium">{item.status}</span>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Top-up History */}
+            <div className="lg:col-span-2 bg-card border rounded-lg overflow-hidden">
+              <div className="px-6 py-4 border-b flex items-center justify-between bg-muted/30">
+                <h3 className="font-semibold">Recent Transactions</h3>
+                <Download className="h-4 w-4 text-muted-foreground cursor-pointer hover:text-foreground" />
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-muted/50 text-[10px] font-bold uppercase tracking-wider text-muted-foreground border-b">
+                    <tr>
+                      <th className="px-6 py-3 text-left">Date</th>
+                      <th className="px-6 py-3 text-left">Reference</th>
+                      <th className="px-6 py-3 text-left">Method</th>
+                      <th className="px-6 py-3 text-right">Amount</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y">
+                    {topups && topups.length > 0 ? (
+                      topups.map((topup: any) => (
+                        <tr key={topup.id} className="hover:bg-muted/20 transition-colors">
+                          <td className="px-6 py-4 text-sm text-muted-foreground">{new Date(topup.created_at).toLocaleDateString()}</td>
+                          <td className="px-6 py-4 text-sm font-mono text-muted-foreground">#{topup.reference || topup.id}</td>
+                          <td className="px-6 py-4">
+                            <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-muted border capitalize">{topup.method}</span>
+                          </td>
+                          <td className="px-6 py-4 text-right text-sm font-bold text-green-600">+${Number(topup.amount).toFixed(2)}</td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan={4} className="px-6 py-8 text-center text-muted-foreground italic">No transactions found</td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Billing Info */}
+            <div className="bg-card border rounded-lg p-6 space-y-6">
+              <h3 className="font-semibold border-b pb-4">Billing Profile</h3>
+              <div className="space-y-4">
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Company</span>
+                  <span className="font-medium">{stats?.company?.name || 'V-Nilgiri'}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Billing Status</span>
+                  <span className="text-green-600 font-semibold bg-green-500/10 px-2 py-0.5 rounded">Active</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Min. Balance</span>
+                  <span className="font-medium">$1.00</span>
+                </div>
+              </div>
+              <div className="pt-4 border-t">
+                <p className="text-[10px] text-muted-foreground uppercase font-bold mb-4">Need help?</p>
+                <Button variant="outline" className="w-full text-xs h-9">Contact Support</Button>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  );
                       <span className="text-sm font-semibold">{item.count}</span>
                     </div>
                     <div className="h-2 bg-muted rounded-full overflow-hidden">
@@ -897,6 +1022,41 @@ export default function Dashboard() {
       </div>
 
       <div className="bg-card border rounded-lg p-8">
+        <h3 className="text-h3 font-semibold mb-2">Nilgiri Bot Configuration</h3>
+        <p className="text-sm text-muted-foreground mb-6">Manage the core intelligence and personality of your primary AI agent</p>
+        
+        <div className="space-y-6">
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <label className="text-sm font-semibold flex items-center gap-2">
+                <Bot className="h-4 w-4 text-primary" />
+                Master System Prompt
+              </label>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground bg-muted px-2 py-0.5 rounded">Primary Model</span>
+            </div>
+            <textarea
+              value={systemPrompt}
+              onChange={(e) => setSystemPrompt(e.target.value)}
+              placeholder="Enter the system prompt that defines the bot's behavior, knowledge, and personality..."
+              className="w-full min-h-[300px] p-4 rounded-xl border bg-muted/30 focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-sm font-sans leading-relaxed"
+            />
+            <p className="text-xs text-muted-foreground italic">
+              Tip: Be specific about the bot's role, tone (e.g., professional vs friendly), and key information about Nilgiri College.
+            </p>
+          </div>
+
+          <div className="flex justify-end gap-3 pt-4 border-t">
+            <Button variant="outline" onClick={() => setSystemPrompt(stats?.company?.system_prompt || "")}>
+              Discard Changes
+            </Button>
+            <Button onClick={handleUpdateSystemPrompt} disabled={isSavingPrompt || systemPrompt === stats?.company?.system_prompt}>
+              {isSavingPrompt ? <><Loader className="h-4 w-4 animate-spin mr-2" /> Saving...</> : "Update System Prompt"}
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      <div className="bg-card border rounded-lg p-8">
         <h3 className="text-h3 font-semibold mb-6">Account Information</h3>
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
@@ -1001,15 +1161,8 @@ export default function Dashboard() {
 
       <div className="bg-card border rounded-lg p-8">
         <h3 className="text-h3 font-semibold mb-6 text-red-600">Danger Zone</h3>
-        <div className="space-y-4">
-          <p className="text-sm text-muted-foreground">Once you delete your account, there is no going back. Please be certain.</p>
-          <Button variant="destructive">Delete Account</Button>
-        </div>
-      </div>
-
-      <div className="flex gap-3">
-        <Button>Save Changes</Button>
-        <Button variant="outline">Cancel</Button>
+        <p className="text-sm text-muted-foreground mb-4">Once you delete your account, there is no going back. Please be certain.</p>
+        <Button variant="destructive">Delete Account</Button>
       </div>
     </div>
   );
