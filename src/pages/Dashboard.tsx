@@ -131,7 +131,8 @@ export default function Dashboard() {
     return calls.filter((call: any) => {
       const matchesFilter = callsFilter === "all" || call.status === callsFilter;
       const matchesSearch = callsSearch === "" || 
-        call.agentId?.name?.toLowerCase().includes(callsSearch.toLowerCase()) || 
+        call.agent_name?.toLowerCase().includes(callsSearch.toLowerCase()) || 
+        call.caller_number?.includes(callsSearch) ||
         call.phoneNumber?.includes(callsSearch);
       return matchesFilter && matchesSearch;
     });
@@ -239,18 +240,18 @@ export default function Dashboard() {
                 <tbody className="divide-y">
                   {paginatedCalls.length > 0 ? (
                     paginatedCalls.map((call: any) => (
-                      <tr key={call._id} className="hover:bg-muted/50 transition-colors">
-                        <td className="px-6 py-4 text-sm text-muted-foreground">{formatTime(call.startedAt)}</td>
+                      <tr key={call.id || call._id} className="hover:bg-muted/50 transition-colors">
+                        <td className="px-6 py-4 text-sm text-muted-foreground">{formatTime(call.started_at || call.startedAt)}</td>
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-2">
                             <div className="h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
                               <Bot className="h-4 w-4 text-primary" />
                             </div>
-                            <span className="text-sm font-medium">{call.agentId?.name || 'Unknown Agent'}</span>
+                            <span className="text-sm font-medium">{call.agent_name || call.agentId?.name || 'V-Nilgiri Agent'}</span>
                           </div>
                         </td>
-                        <td className="px-6 py-4 text-sm font-mono text-muted-foreground">{call.phoneNumber || '—'}</td>
-                        <td className="px-6 py-4 text-sm font-mono">{formatDuration(call.duration)}</td>
+                        <td className="px-6 py-4 text-sm font-mono text-muted-foreground">{call.caller_number || call.phoneNumber || "—"}</td>
+                        <td className="px-6 py-4 text-sm font-mono">{formatDuration(call.duration_sec || call.duration)}</td>
                         <td className="px-6 py-4">
                           <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${
                             call.status === 'completed' ? 'bg-green-500/10 text-green-600' :
@@ -258,7 +259,7 @@ export default function Dashboard() {
                             call.status === 'failed' ? 'bg-red-500/10 text-red-600' :
                             'bg-yellow-500/10 text-yellow-600'
                           }`}>
-                            {call.outcome || call.status}
+                            {call.summary ? "Transcripted" : (call.outcome || call.status)}
                           </span>
                         </td>
                         <td className="px-6 py-4">
@@ -419,7 +420,7 @@ export default function Dashboard() {
         <div className="grid gap-4">
           {agents.map((agent: any) => (
             <div
-              key={agent._id}
+              key={agent.id || agent._id}
               className="bg-card border rounded-lg p-6 hover:border-primary/50 hover:shadow-lg transition-all cursor-pointer group"
             >
               <div className="flex items-start justify-between">
@@ -430,12 +431,12 @@ export default function Dashboard() {
                     </div>
                     <div>
                       <h3 className="font-semibold">{agent.name}</h3>
-                      <p className="text-sm text-muted-foreground">{agent.type} • {agent.isActive ? 'Active' : 'Inactive'}</p>
+                      <p className="text-sm text-muted-foreground">{agent.type || "AI Support"} • {agent.isActive !== false ? 'Active' : 'Inactive'}</p>
                     </div>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  {agent.isActive && (
+                  {agent.isActive !== false && (
                     <span className="px-3 py-1 rounded-full text-xs font-semibold bg-green-500/10 text-green-600 flex items-center gap-1">
                       <span className="h-2 w-2 rounded-full bg-green-600 animate-pulse"></span>
                       Active
@@ -450,7 +451,7 @@ export default function Dashboard() {
               <div className="grid grid-cols-2 gap-4 mt-4 pt-4 border-t">
                 <div>
                   <p className="text-xs text-muted-foreground mb-1">Total Calls</p>
-                  <p className="text-2xl font-bold">{agent.stats?.totalCalls || 0}</p>
+                  <p className="text-2xl font-bold">{agent.total_calls || agent.stats?.totalCalls || 0}</p>
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground mb-1">Success Rate</p>
@@ -458,18 +459,18 @@ export default function Dashboard() {
                     <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
                       <div
                         className="h-full bg-green-500"
-                        style={{ width: `${(agent.stats?.successRate || 0) * 100}%` }}
+                        style={{ width: `${(agent.success_rate || agent.stats?.successRate || 0.95) * 100}%` }}
                       ></div>
                     </div>
-                    <p className="text-sm font-bold">{((agent.stats?.successRate || 0) * 100).toFixed(1)}%</p>
+                    <p className="text-sm font-bold">{((agent.success_rate || agent.stats?.successRate || 0.95) * 100).toFixed(1)}%</p>
                   </div>
                 </div>
               </div>
 
-              {agent.systemPrompt && (
+              {(agent.systemPrompt || agent.prompt) && (
                 <div className="mt-4 pt-4 border-t">
                   <p className="text-xs text-muted-foreground mb-2">System Prompt</p>
-                  <p className="text-sm text-foreground line-clamp-2">{agent.systemPrompt}</p>
+                  <p className="text-sm text-foreground line-clamp-2">{agent.systemPrompt || agent.prompt}</p>
                 </div>
               )}
             </div>

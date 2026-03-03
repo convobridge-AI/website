@@ -8,6 +8,7 @@ interface User {
   email: string;
   name?: string;
   company?: string;
+  company_id?: number;
 }
 
 interface AuthContextType {
@@ -34,7 +35,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           id: session.user.id,
           email: session.user.email || '',
           name: session.user.user_metadata?.name,
-          company: session.user.user_metadata?.company_name
+          company: session.user.user_metadata?.company_name,
+          company_id: session.user.user_metadata?.company_id
         });
       }
       setLoading(false);
@@ -48,7 +50,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           id: session.user.id,
           email: session.user.email || '',
           name: session.user.user_metadata?.name,
-          company: session.user.user_metadata?.company_name
+          company: session.user.user_metadata?.company_name,
+          company_id: session.user.user_metadata?.company_id
         });
       } else {
         setUser(null);
@@ -67,7 +70,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         id: data.user.id,
         email: data.user.email || '',
         name: data.user.user_metadata?.name,
-        company: data.user.user_metadata?.company_name
+        company: data.user.user_metadata?.company_name,
+        company_id: data.user.user_metadata?.company_id
       });
     }
     toast.success('Login successful!');
