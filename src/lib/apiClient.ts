@@ -56,19 +56,29 @@ class APIClient {
 
   async login(email: string, password: string) {
     // Use Supabase RPC function for custom PSQL auth
+    console.log('[apiClient] Attempting login with email:', email);
+    
     const { data, error } = await supabase.rpc('custom_login', {
       user_email: email,
       user_password: password,
     });
 
-    if (error) throw error;
+    console.log('[apiClient] RPC response:', { data, error });
+
+    if (error) {
+      console.error('[apiClient] Supabase RPC error:', error);
+      throw error;
+    }
     
     const result = data as { success: boolean; user?: any; error?: string };
     
     if (!result.success) {
+      console.error('[apiClient] Login failed:', result.error);
       throw new Error(result.error || 'Login failed');
     }
 
+    console.log('[apiClient] Login successful for user:', result.user.email);
+    
     // Store user data locally
     this.currentUser = result.user;
     localStorage.setItem('currentUser', JSON.stringify(result.user));
@@ -293,7 +303,7 @@ class APIClient {
       throw new Error('Not authenticated');
     }
     
-    const { data, error } = await supabase.rpc('get_leads', {
+    const { data, error } = await supabase.rpc('get_user_leads', {
       user_id_param: this.currentUser.id
     });
     

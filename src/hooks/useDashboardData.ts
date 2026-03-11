@@ -13,34 +13,26 @@ export const useDashboardData = () => {
   const [topups, setTopups] = useState<any[]>([]);
 
   const fetchData = async () => {
-    if (!user?.company_id) return;
+    if (!user?.id) return;
     
     try {
       setLoading(true);
       
-      const [callsRes, leadsRes, companiesRes, topupsRes] = await Promise.all([
-        supabase.from('calls')
-          .select('*')
-          .eq('company_id', user.company_id)
-          .order('started_at', { ascending: false }),
-        supabase.from('leads')
-          .select('*')
-          .eq('company_id', user.company_id)
-          .order('created_at', { ascending: false }),
-        supabase.from('companies')
-          .select('*')
-          .eq('id', user.company_id)
-          .single(),
-        supabase.from('topups')
-          .select('*')
-          .eq('company_id', user.company_id)
-          .order('created_at', { ascending: false })
+      // Use RPC functions instead of direct queries to bypass RLS
+      const [callsRes, leadsRes, companyRes, topupsRes] = await Promise.all([
+        supabase.rpc('get_user_calls', { user_id_param: user.id }),
+        supabase.rpc('get_user_leads', { user_id_param: user.id }),
+        supabase.rpc('get_user_company', { user_id_param: user.id }),
+        supabase.rpc('get_user_topups', { user_id_param: user.id })
       ]);
 
       if (callsRes.error) throw callsRes.error;
+      if (leadsRes.error) throw leadsRes.error;
+      if (companyRes.error) throw companyRes.error;
+      
       const callsData = callsRes.data || [];
       const leadsData = leadsRes.data || [];
-      const companyData = companiesRes.data;
+      const companyData = companyRes.data; // This is now JSONB object
       const topupsData = topupsRes.data || [];
       
       // Calculate analytics
@@ -77,7 +69,7 @@ export const useDashboardData = () => {
   };
 
   useEffect(() => {
-    if (user?.company_id) {
+    if (user?.id) {
       fetchData();
 
       // Subscribe to real-time updates for calls and leads restricted to this company
@@ -117,7 +109,7 @@ export const useDashboardData = () => {
         supabase.removeChannel(companiesSubscription);
       };
     }
-  }, [user?.company_id]);
+  }, [user?.id]);
 
   return {
     loading,

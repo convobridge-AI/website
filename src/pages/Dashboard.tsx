@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { PremiumAudioPlayer } from "@/components/PremiumAudioPlayer";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/lib/supabase";
+import { apiClient } from "@/lib/apiClient";
 import { toast } from "sonner";
 import {
   Select,
@@ -56,12 +57,15 @@ export default function Dashboard() {
     if (!stats?.company?.id) return;
     setIsSavingPrompt(true);
     try {
-      const { data, error } = await supabase
-        .from('companies')
-        .update({ system_prompt: systemPrompt })
-        .eq('id', stats.company.id);
+      const { user } = await apiClient.getCurrentUser();
+      const { data, error } = await supabase.rpc('update_company_prompt', {
+        user_id_param: user.id,
+        new_prompt: systemPrompt
+      });
       
       if (error) throw error;
+      if (!data?.success) throw new Error(data?.error || 'Failed to update prompt');
+      
       toast({ title: "System prompt updated successfully" });
       refresh();
     } catch (err: any) {
