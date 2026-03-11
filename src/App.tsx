@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./contexts/AuthContext";
 import { ProtectedRoute } from "./components/ProtectedRoute";
+import { AdminRoute } from "./components/AdminRoute";
 import { SplashScreen } from "./components/SplashScreen";
 import Home from "./pages/Home";
 import Pricing from "./pages/Pricing";
@@ -53,8 +54,8 @@ const App = () => {
               <Route path="/dashboard-demo" element={<DashboardDemo />} />
               <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
               <Route path="/agent-builder" element={<ProtectedRoute><AgentBuilder /></ProtectedRoute>} />
-              <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
-              <Route path="/admin-enhanced" element={<ProtectedRoute><AdminEnhanced /></ProtectedRoute>} />
+              <Route path="/admin" element={<AdminRoute><Admin /></AdminRoute>} />
+              <Route path="/admin-enhanced" element={<AdminRoute><AdminEnhanced /></AdminRoute>} />
               <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
               <Route path="/dashboard/agents/new" element={<ProtectedRoute><AgentBuilder /></ProtectedRoute>} />
               <Route path="*" element={<NotFound />} />

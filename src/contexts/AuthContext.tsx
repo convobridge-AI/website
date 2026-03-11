@@ -9,6 +9,8 @@ interface User {
   name?: string;
   company?: string;
   company_id?: number;
+  role?: string; // 'admin', 'manager', 'user'
+  full_name?: string;
 }
 
 interface AuthContextType {
@@ -18,6 +20,8 @@ interface AuthContextType {
   signup: (email: string, password: string, name: string, company_name?: string) => Promise<void>;
   logout: () => void;
   isAuthenticated: boolean;
+  isAdmin: boolean;
+  isManager: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -66,12 +70,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     if (error) throw error;
     
     if (data.user) {
+      // Fetch user profile from user_profiles table for role and company_id
+      const { data: profile, error: profileError } = await supabase
+        .from('user_profiles')
+        .select('company_id, role, full_name')
+        .eq('id', data.user.id)
+        .single();
+
       setUser({
         id: data.user.id,
         email: data.user.email || '',
-        name: data.user.user_metadata?.name,
+        name: data.user.user_metadata?.name || profile?.full_name,
         company: data.user.user_metadata?.company_name,
-        company_id: data.user.user_metadata?.company_id
+        company_id: profile?.company_id,
+        role: profile?.role || 'user',
+        full_name: profile?.full_name
       });
     }
     toast.success('Login successful!');
@@ -119,6 +132,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         signup,
         logout,
         isAuthenticated: !!user,
+        isAdmin: user?.role === 'admin',
+        isManager: user?.role === 'manager' || user?.role === 'admin',
       }}
     >
       {children}
