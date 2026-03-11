@@ -96,9 +96,9 @@ await login('admin@convobridge.in', 'admin234@#$')
 
 | Field | Value |
 |-------|-------|
-| **Email** | `admin@nilgiri.edu` (example) |
-| **Password** | User's password |
-| **Role** | `manager` or `user` |
+| **Email** | `ai@nilgiricollege.edu` |
+| **Password** | `nilgiri123` |
+| **Role** | `manager` |
 | **Company ID** | `1` (Nilgiri College) |
 | **Accessed Page** | `/dashboard` (Company Dashboard) |
 
@@ -109,43 +109,8 @@ await login('admin@convobridge.in', 'admin234@#$')
 - Manage DID: `00914902474600` (education counselor AI)
 - Request credits (admin approves)
 
-**Authentication Flow:**
-```typescript
-// Create Nilgiri Manager (via Supabase Dashboard or API)
-INSERT INTO user_profiles (id, company_id, role, full_name)
-VALUES ('uuid-nilgiri-manager', 1, 'manager', 'Nilgiri Manager');
-
-// Login
-await login('admin@nilgiri.edu', 'password123')
-
-// AuthContext fetches:
-// { id: 'uuid...', company_id: 1, role: 'manager', full_name: 'Nilgiri Manager' }
-
-// Sets user context:
-// { ..., company_id: 1, role: 'manager', isAdmin: false, isManager: true }
-
-// Row Level Security kicks in:
-// Can only see companies WHERE id = 1
-// Can only see calls WHERE company_id = 1
-// Can only see agents WHERE company_id = 1
-
-// Routes to: /dashboard (protected by ProtectedRoute + RLS)
-```
-
-**RLS Policy in Database:**
-```sql
--- Companies: User sees only their company
-CREATE POLICY companies_select ON companies 
-  FOR SELECT USING (
-    id IN (SELECT company_id FROM user_profiles WHERE id = auth.uid())
-  );
-
--- Calls: User sees only their company's calls
-CREATE POLICY calls_select ON calls 
-  FOR SELECT USING (
-    company_id IN (SELECT company_id FROM user_profiles WHERE id = auth.uid())
-  );
-```
+**Setup (Custom Auth):**
+The Nilgiri user is stored in `app_users` with `company_id = 1`. RLS filters all data automatically.
 
 ---
 
@@ -153,27 +118,11 @@ CREATE POLICY calls_select ON calls
 
 | Field | Value |
 |-------|-------|
-| **Email** | `admin@ksrtc.gov.in` (example) |
-| **Password** | User's password |
-| **Role** | `manager` or `user` |
+| **Email** | `ai@keralartc.com` |
+| **Password** | `ksrtc123` |
+| **Role** | `manager` |
 | **Company ID** | `3` (KSRTC) |
 | **Accessed Page** | `/dashboard` (Company Dashboard) |
-
-**How to Create KSRTC User:**
-
-```sql
--- 1. Create auth user in Supabase Dashboard (admin@ksrtc.gov.in)
--- 2. Then create profile entry:
-INSERT INTO user_profiles (id, company_id, role, full_name)
-VALUES ('uuid-ksrtc-manager', 3, 'manager', 'KSRTC Manager');
-```
-
-**What KSRTC Users Can Do:**
-- View only KSRTC company data
-- AI Agent: Transport support (handles bus bookings, complaints)
-- DID: `00914902474601` routes calls to KSRTC AI
-- Monitor bus-related calls & leads
-- Manage team members in KSRTC
 
 ---
 
@@ -181,20 +130,11 @@ VALUES ('uuid-ksrtc-manager', 3, 'manager', 'KSRTC Manager');
 
 | Field | Value |
 |-------|-------|
-| **Email** | `admin@smsoft.com` (example) |
-| **Password** | User's password |
-| **Role** | `manager` or `user` |
+| **Email** | `ai@smsoft.co.in` |
+| **Password** | `smsoft123` |
+| **Role** | `manager` |
 | **Company ID** | `4` (SM Soft) |
 | **Accessed Page** | `/dashboard` (Company Dashboard) |
-
-**How to Create SM Soft User:**
-
-```sql
--- 1. Create auth user in Supabase Dashboard (admin@smsoft.com)
--- 2. Then create profile entry:
-INSERT INTO user_profiles (id, company_id, role, full_name)
-VALUES ('uuid-smsoft-manager', 4, 'manager', 'SM Soft Manager');
-```
 
 **What SM Soft Users Can Do:**
 - View only SM Soft company data

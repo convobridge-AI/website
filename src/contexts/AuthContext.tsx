@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { supabase } from '@/lib/supabase';
+import { apiClient } from '@/lib/apiClient';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 
@@ -31,93 +31,88 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
+  const normalizeUser = (payload: unknown): User | null => {
+    if (!payload) return null;
+
+    const root = payload as Record<string, unknown>;
+    const nestedData = root.data as Record<string, unknown> | undefined;
+    const source =
+      (root.user as Record<string, unknown> | undefined) ??
+      (nestedData?.user as Record<string, unknown> | undefined) ??
+      root;
+
+    if (!source || typeof source !== 'object') return null;
+
+    const rawCompanyId = source.company_id ?? source.companyId;
+    const companyId =
+      rawCompanyId === undefined || rawCompanyId === null
+        ? undefined
+        : Number(rawCompanyId);
+
+    return {
+      id: String(source.id ?? ''),
+      email: String(source.email ?? ''),
+      name: (source.name as string | undefined) ?? (source.full_name as string | undefined),
+      full_name: (source.full_name as string | undefined) ?? (source.name as string | undefined),
+      company: (source.company_name as string | undefined) ?? (source.company as string | undefined),
+      company_id: Number.isNaN(companyId) ? undefined : companyId,
+      role: (source.role as string | undefined) ?? 'user',
+    };
+  };
+
   useEffect(() => {
     const initAuth = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user) {
-        setUser({
-          id: session.user.id,
-          email: session.user.email || '',
-          name: session.user.user_metadata?.name,
-          company: session.user.user_metadata?.company_name,
-          company_id: session.user.user_metadata?.company_id
-        });
+      try {
+        if (!apiClient.isAuthenticated()) {
+          setLoading(false);
+          return;
+        }
+
+        const me = await apiClient.getCurrentUser();
+        setUser(normalizeUser(me));
+      } catch (_error) {
+        // Invalid/expired token: clear local auth state.
+        apiClient.logout();
+        setUser(null);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
 
     initAuth();
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session?.user) {
-        setUser({
-          id: session.user.id,
-          email: session.user.email || '',
-          name: session.user.user_metadata?.name,
-          company: session.user.user_metadata?.company_name,
-          company_id: session.user.user_metadata?.company_id
-        });
-      } else {
-        setUser(null);
-      }
-    });
-
-    return () => subscription.unsubscribe();
   }, []);
 
   const login = async (email: string, password: string) => {
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) throw error;
-    
-    if (data.user) {
-      // Fetch user profile from user_profiles table for role and company_id
-      const { data: profile, error: profileError } = await supabase
-        .from('user_profiles')
-        .select('company_id, role, full_name')
-        .eq('id', data.user.id)
-        .single();
-
-      setUser({
-        id: data.user.id,
-        email: data.user.email || '',
-        name: data.user.user_metadata?.name || profile?.full_name,
-        company: data.user.user_metadata?.company_name,
-        company_id: profile?.company_id,
-        role: profile?.role || 'user',
-        full_name: profile?.full_name
-      });
+    const response = await apiClient.login(email, password);
+    const userData = normalizeUser(response);
+    if (!userData) {
+      throw new Error('Login succeeded but user payload is missing');
     }
+
+    setUser(userData);
     toast.success('Login successful!');
+
+    if (userData.role === 'admin') {
+      navigate('/admin');
+      return;
+    }
+
     navigate('/dashboard');
   };
 
   const signup = async (email: string, password: string, name: string, company_name?: string) => {
-    const { data, error } = await supabase.auth.signUp({ 
-      email, 
-      password,
-      options: {
-        data: {
-          name,
-          company_name
-        }
-      }
-    });
-    if (error) throw error;
-    
-    if (data.user) {
-      setUser({
-        id: data.user.id,
-        email: data.user.email || '',
-        name: data.user.user_metadata?.name,
-        company: data.user.user_metadata?.company_name
-      });
+    const response = await apiClient.signup(email, password, name, company_name);
+    const userData = normalizeUser(response);
+    if (userData) {
+      setUser(userData);
     }
+
     toast.success('Account created successfully!');
     navigate('/dashboard');
   };
 
   const logout = async () => {
-    await supabase.auth.signOut();
+    apiClient.logout();
     setUser(null);
     toast.info('Logged out successfully');
     navigate('/login');

@@ -26,8 +26,10 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { useDashboardData } from "@/hooks/useDashboardData";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function Dashboard() {
+  const { logout } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [activeTab, setActiveTab] = useState("home");
   const [callDetailOpen, setCallDetailOpen] = useState(false);
@@ -1091,11 +1093,7 @@ export default function Dashboard() {
             )}
           </div>
           <button
-            onClick={() => {
-              localStorage.removeItem("token");
-              localStorage.removeItem("user");
-              window.location.href = "/login";
-            }}
+            onClick={logout}
             className="w-full flex items-center gap-3 px-4 py-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-all text-sm"
             title="Logout"
           >

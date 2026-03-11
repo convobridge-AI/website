@@ -4,9 +4,10 @@ import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { Card } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Textarea } from '@/components/ui/textarea';
 import { apiClient } from '@/lib/apiClient';
 import { useToast } from '@/hooks/use-toast';
-import { Copy, Check, Loader2 } from 'lucide-react';
+import { Copy, Check, Loader2, Lock, Save, Sparkles } from 'lucide-react';
 
 export default function Settings() {
   const { toast } = useToast();
@@ -14,9 +15,22 @@ export default function Settings() {
   const [saving, setSaving] = useState(false);
   const [settings, setSettings] = useState<any>(null);
   const [apiKeyCopied, setApiKeyCopied] = useState(false);
+  
+  // Password change state
+  const [passwordData, setPasswordData] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  });
+  const [changingPassword, setChangingPassword] = useState(false);
+
+  // System prompt state
+  const [systemPrompt, setSystemPrompt] = useState("");
+  const [fetchingPrompt, setFetchingPrompt] = useState(false);
 
   useEffect(() => {
     loadSettings();
+    loadSystemPrompt();
   }, []);
 
   const loadSettings = async () => {
@@ -30,15 +44,64 @@ export default function Settings() {
     }
   };
 
+  const loadSystemPrompt = async () => {
+    try {
+      setFetchingPrompt(true);
+      // Fetching the first active prompt for the company
+      const res = await apiClient.getAgents();
+      if (res.agents && res.agents.length > 0) {
+        setSystemPrompt(res.agents[0].systemPrompt || "");
+      }
+    } catch (err) {
+      console.error("Failed to load prompt", err);
+    } finally {
+      setFetchingPrompt(false);
+    }
+  };
+
   const handleSave = async () => {
     setSaving(true);
     try {
       await apiClient.updateSettings(settings);
-      toast({ title: 'Settings saved successfully' });
+      
+      // Also update system prompt if changed
+      const res = await apiClient.getAgents();
+      if (res.agents && res.agents.length > 0) {
+        await apiClient.updateAgent(res.agents[0]._id, { 
+          ...res.agents[0],
+          systemPrompt 
+        });
+      }
+
+      toast({ title: 'Settings and Prompt saved successfully' });
     } catch (err) {
-      toast({ title: 'Failed to save settings', variant: 'destructive' });
+      toast({ title: 'Failed to save changes', variant: 'destructive' });
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (passwordData.newPassword !== passwordData.confirmPassword) {
+      toast({ title: 'Passwords do not match', variant: 'destructive' });
+      return;
+    }
+
+    setChangingPassword(true);
+    try {
+      // Endpoint handled by backend/routes/auth.ts
+      await apiClient.updatePassword(passwordData.currentPassword, passwordData.newPassword);
+      toast({ title: 'Password updated successfully' });
+      setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
+    } catch (err: any) {
+      toast({ 
+        title: 'Failed to update password', 
+        description: err.response?.data?.message || 'Check your current password',
+        variant: 'destructive' 
+      });
+    } finally {
+      setChangingPassword(false);
     }
   };
 
@@ -79,7 +142,8 @@ export default function Settings() {
       <Tabs defaultValue="general" className="space-y-6">
         <TabsList>
           <TabsTrigger value="general">General</TabsTrigger>
-          <TabsTrigger value="voice">Voice & Language</TabsTrigger>
+          <TabsTrigger value="prompt">System Prompt</TabsTrigger>
+          <TabsTrigger value="security">Security</TabsTrigger>
           <TabsTrigger value="integrations">Integrations</TabsTrigger>
           <TabsTrigger value="api">API Keys</TabsTrigger>
         </TabsList>
@@ -134,37 +198,98 @@ export default function Settings() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="voice" className="space-y-4">
+        <TabsContent value="prompt" className="space-y-4">
           <Card className="p-6 space-y-4">
-            <h3 className="font-semibold text-lg">Default Voice & Language</h3>
-            
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Default Voice</label>
-              <select
-                className="w-full p-2 border rounded-lg"
-                value={settings?.defaultVoice || 'aria'}
-                onChange={(e) => setSettings({ ...settings, defaultVoice: e.target.value })}
-              >
-                <option value="aria">Aria (Female, American)</option>
-                <option value="guy">Guy (Male, American)</option>
-                <option value="jenny">Jenny (Female, British)</option>
-                <option value="chris">Chris (Male, Australian)</option>
-              </select>
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="font-semibold text-lg flex items-center gap-2">
+                  <Sparkles className="h-5 w-5 text-primary" />
+                  AI Master Prompt
+                </h3>
+                <p className="text-sm text-muted-foreground">Define the base behavior for all your company AI calls</p>
+              </div>
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium">Default Language</label>
-              <select
-                className="w-full p-2 border rounded-lg"
-                value={settings?.defaultLanguage || 'English'}
-                onChange={(e) => setSettings({ ...settings, defaultLanguage: e.target.value })}
-              >
-                <option value="English">English</option>
-                <option value="Spanish">Spanish</option>
-                <option value="French">French</option>
-                <option value="German">German</option>
-              </select>
+              <label className="text-sm font-medium">System Prompt</label>
+              {fetchingPrompt ? (
+                <div className="h-48 border rounded-lg animate-pulse bg-muted/50" />
+              ) : (
+                <Textarea 
+                  value={systemPrompt}
+                  onChange={(e) => setSystemPrompt(e.target.value)}
+                  placeholder="Example: You are a friendly customer service agent..." 
+                  className="min-h-[200px] font-mono text-sm leading-relaxed"
+                />
+              )}
+              <p className="text-xs text-muted-foreground">
+                Changes here will reflect in future calls handled by your agents.
+              </p>
             </div>
+            
+            <Button 
+              onClick={handleSave} 
+              disabled={saving} 
+              className="w-fit"
+            >
+              <Save className="h-4 w-4 mr-2" />
+              Update AI Prompt
+            </Button>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="security" className="space-y-4">
+          <Card className="p-6 space-y-4">
+            <h3 className="font-semibold text-lg flex items-center gap-2">
+              <Lock className="h-5 w-5 text-primary" />
+              Security Settings
+            </h3>
+            
+            <form onSubmit={handleChangePassword} className="space-y-4 max-w-md">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Current Password</label>
+                <Input
+                  type="password"
+                  value={passwordData.currentPassword}
+                  onChange={(e) => setPasswordData({ ...passwordData, currentPassword: e.target.value })}
+                  placeholder="••••••••"
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium">New Password</label>
+                <Input
+                  type="password"
+                  value={passwordData.newPassword}
+                  onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })}
+                  placeholder="••••••••"
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Confirm New Password</label>
+                <Input
+                  type="password"
+                  value={passwordData.confirmPassword}
+                  onChange={(e) => setPasswordData({ ...passwordData, confirmPassword: e.target.value })}
+                  placeholder="••••••••"
+                  required
+                />
+              </div>
+
+              <Button type="submit" disabled={changingPassword}>
+                {changingPassword ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    Updating...
+                  </>
+                ) : (
+                  'Change Password'
+                )}
+              </Button>
+            </form>
           </Card>
         </TabsContent>
 

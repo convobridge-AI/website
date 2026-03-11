@@ -19,7 +19,6 @@ import Dashboard from "./pages/Dashboard";
 import DashboardDemo from "./pages/DashboardDemo";
 import AgentBuilder from "./pages/AgentBuilder";
 import Admin from "./pages/Admin";
-import AdminEnhanced from "./pages/AdminEnhanced";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 
@@ -55,7 +54,6 @@ const App = () => {
               <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
               <Route path="/agent-builder" element={<ProtectedRoute><AgentBuilder /></ProtectedRoute>} />
               <Route path="/admin" element={<AdminRoute><Admin /></AdminRoute>} />
-              <Route path="/admin-enhanced" element={<AdminRoute><AdminEnhanced /></AdminRoute>} />
               <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
               <Route path="/dashboard/agents/new" element={<ProtectedRoute><AgentBuilder /></ProtectedRoute>} />
               <Route path="*" element={<NotFound />} />

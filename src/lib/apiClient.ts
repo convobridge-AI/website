@@ -188,6 +188,16 @@ class APIClient {
     return response.data;
   }
 
+  async getCompanies() {
+    const response = await this.client.get('/admin/companies');
+    return response.data;
+  }
+
+  async createTopup(data: any) {
+    const response = await this.client.post('/admin/topups', data);
+    return response.data;
+  }
+
   async updateSettings(settings: any) {
     const response = await this.client.put('/settings', settings);
     return response.data;
@@ -205,6 +215,14 @@ class APIClient {
 
   async disconnectIntegration(name: string) {
     const response = await this.client.delete(`/settings/integrations/${name}`);
+    return response.data;
+  }
+
+  async updatePassword(currentPassword: string, newPassword: string) {
+    const response = await this.client.post('/auth/change-password', {
+      currentPassword,
+      newPassword,
+    });
     return response.data;
   }
 

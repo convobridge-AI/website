@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { supabase } from '@/lib/supabase';
+import { apiClient } from '@/lib/apiClient';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
+import { Navigate } from 'react-router-dom';
 import { 
   Building2, 
   CreditCard, 
@@ -26,6 +28,7 @@ import {
 } from "@/components/ui/dialog";
 
 export default function Admin() {
+  const { isAdmin, loading: authLoading } = useAuth();
   const { toast } = useToast();
   const [companies, setCompanies] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -40,17 +43,9 @@ export default function Admin() {
   const loadData = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('companies')
-        .select(`
-          *,
-          calls_count:calls(count),
-          leads_count:leads(count)
-        `)
-        .order('name');
-      
-      if (error) throw error;
-      setCompanies(data || []);
+      // Use the standard company listing which RLS will filter for administrators to see all
+      const companiesRes = await apiClient.getCompanies();
+      setCompanies(companiesRes.companies || []);
     } catch (err: any) {
       toast({ title: 'Error loading companies', description: err.message, variant: 'destructive' });
     } finally {
@@ -65,16 +60,12 @@ export default function Admin() {
     setIsTopupLoading(true);
     
     try {
-      const { error } = await supabase
-        .from('topups')
-        .insert({
-          company_id: selectedCompany.id,
-          amount: parseFloat(topupAmount),
-          method: topupMethod,
-          reference: `Admin Topup - ${new Date().toLocaleDateString()}`
-        });
-
-      if (error) throw error;
+      await apiClient.createTopup({
+        company_id: selectedCompany.id,
+        amount: parseFloat(topupAmount),
+        method: topupMethod,
+        reference: `Admin Topup - ${new Date().toLocaleDateString()}`
+      });
 
       toast({ 
         title: 'Credits Added Successfully', 
@@ -95,6 +86,18 @@ export default function Admin() {
     c.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
     c.slug.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!isAdmin) {
+    return <Navigate to="/dashboard" replace />;
+  }
 
   return (
     <div className="max-w-7xl mx-auto p-8 space-y-8 animate-fade-in">
@@ -255,11 +258,11 @@ export default function Admin() {
                             <div className="bg-gray-50 rounded-lg p-4 space-y-2 border">
                               <div className="flex justify-between text-sm">
                                 <span className="text-muted-foreground">Current Balance</span>
-                                <span className="font-medium">${parseFloat(selectedCompany?.credit_balance || 0).toFixed(2)}</span>
+                                <span className="font-medium">${Number(selectedCompany?.credit_balance ?? 0).toFixed(2)}</span>
                               </div>
                               <div className="flex justify-between text-base font-bold text-green-600">
                                 <span>New Balance</span>
-                                <span>${(parseFloat(selectedCompany?.credit_balance || 0) + parseFloat(topupAmount || 0)).toFixed(2)}</span>
+                                <span>${(Number(selectedCompany?.credit_balance ?? 0) + Number(topupAmount || 0)).toFixed(2)}</span>
                               </div>
                             </div>
                           </div>
