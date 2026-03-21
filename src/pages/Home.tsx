@@ -16,7 +16,8 @@ export default function Home() {
       <NavBar />
 
       {/* Hero */}
-      <section className="relative pt-28 pb-20 md:pt-36 md:pb-28 overflow-hidden">
+      <section className="relative pt-28 pb-20 md:pt-36 md:pb-28 overflow-hidden isolate">
+
         <AuroraBackground />
         <GridPattern className="opacity-40" />
         

@@ -1,31 +1,24 @@
 import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { supabase } from '@/lib/supabase';
 import { apiClient } from '@/lib/apiClient';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { Navigate } from 'react-router-dom';
-import { 
-  Building2, 
-  CreditCard, 
-  TrendingUp, 
-  Users, 
-  Plus, 
-  Loader2, 
-  Search,
-  CheckCircle2,
-  DollarSign
+import {
+  Building2, CreditCard, TrendingUp, Users,
+  Plus, Loader2, Search, CheckCircle2, DollarSign,
+  Phone, Hash
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogHeader, 
-  DialogTitle, 
-  DialogTrigger,
-  DialogFooter,
-  DialogDescription
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle,
+  DialogTrigger, DialogFooter, DialogDescription
 } from "@/components/ui/dialog";
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue
+} from "@/components/ui/select";
 
 export default function Admin() {
   const { isAdmin, loading: authLoading } = useAuth();
@@ -40,10 +33,18 @@ export default function Admin() {
   const [topupMethod, setTopupMethod] = useState('manual');
   const [isTopupLoading, setIsTopupLoading] = useState(false);
 
+  // DID Pool State
+  const [didNumbers, setDidNumbers] = useState<any[]>([]);
+  const [didLoading, setDidLoading] = useState(false);
+  const [addNumberOpen, setAddNumberOpen] = useState(false);
+  const [newNumber, setNewNumber] = useState('');
+  const [newLabel, setNewLabel] = useState('');
+  const [newNumberCompany, setNewNumberCompany] = useState('');
+  const [addingNumber, setAddingNumber] = useState(false);
+
   const loadData = async () => {
     setLoading(true);
     try {
-      // Use the standard company listing which RLS will filter for administrators to see all
       const companiesRes = await apiClient.getCompanies();
       setCompanies(companiesRes.companies || []);
     } catch (err: any) {
@@ -53,12 +54,24 @@ export default function Admin() {
     }
   };
 
-  useEffect(() => { loadData(); }, []);
+  const loadDids = async () => {
+    setDidLoading(true);
+    try {
+      const { data, error } = await supabase.rpc('admin_get_phone_numbers');
+      if (error) throw error;
+      setDidNumbers(data || []);
+    } catch (err: any) {
+      toast({ title: 'Error loading phone numbers', description: err.message, variant: 'destructive' });
+    } finally {
+      setDidLoading(false);
+    }
+  };
+
+  useEffect(() => { loadData(); loadDids(); }, []);
 
   const handleTopup = async () => {
     if (!selectedCompany || !topupAmount) return;
     setIsTopupLoading(true);
-    
     try {
       await apiClient.createTopup({
         company_id: selectedCompany.id,
@@ -66,19 +79,51 @@ export default function Admin() {
         method: topupMethod,
         reference: `Admin Topup - ${new Date().toLocaleDateString()}`
       });
-
-      toast({ 
-        title: 'Credits Added Successfully', 
-        description: `$${topupAmount} added to ${selectedCompany.name}`,
-      });
-      
+      toast({ title: 'Credits Added Successfully', description: `$${topupAmount} added to ${selectedCompany.name}` });
       setSelectedCompany(null);
       setTopupAmount('50');
-      loadData(); // Refresh balance
+      loadData();
     } catch (err: any) {
       toast({ title: 'Top-up failed', description: err.message, variant: 'destructive' });
     } finally {
       setIsTopupLoading(false);
+    }
+  };
+
+  const handleAssignNumber = async (numberId: number, companyId: string) => {
+    try {
+      const { error } = await supabase.rpc('admin_assign_phone_number', {
+        number_id_param: numberId,
+        company_id_param: parseInt(companyId)
+      });
+      if (error) throw error;
+      toast({ title: 'DID reassigned successfully' });
+      loadDids();
+    } catch (err: any) {
+      toast({ title: 'Failed to reassign DID', description: err.message, variant: 'destructive' });
+    }
+  };
+
+  const handleAddNumber = async () => {
+    if (!newNumber) return;
+    setAddingNumber(true);
+    try {
+      const { error } = await supabase.rpc('admin_add_phone_number', {
+        phone_number_param: newNumber.replace(/\D/g, ''),
+        label_param: newLabel || newNumber,
+        company_id_param: newNumberCompany ? parseInt(newNumberCompany) : null
+      });
+      if (error) throw error;
+      toast({ title: `${newNumber} added to DID pool` });
+      setAddNumberOpen(false);
+      setNewNumber('');
+      setNewLabel('');
+      setNewNumberCompany('');
+      loadDids();
+    } catch (err: any) {
+      toast({ title: 'Failed to add number', description: err.message, variant: 'destructive' });
+    } finally {
+      setAddingNumber(false);
     }
   };
 
@@ -278,6 +323,126 @@ export default function Admin() {
                           </DialogFooter>
                         </DialogContent>
                       </Dialog>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* ── DID Pool Management ──────────────────────────────────────── */}
+      <Card className="stripe-card overflow-hidden">
+        <CardHeader className="border-b bg-gray-50/50 p-6">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+              <CardTitle className="flex items-center gap-2"><Phone className="h-5 w-5 text-primary" /> DID Pool</CardTitle>
+              <CardDescription>Manage phone numbers and assign them to tenants.</CardDescription>
+            </div>
+            <Dialog open={addNumberOpen} onOpenChange={setAddNumberOpen}>
+              <DialogTrigger asChild>
+                <Button className="h-10">
+                  <Plus className="mr-2 h-4 w-4" /> Add DID Number
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                  <DialogTitle>Add Phone Number to Pool</DialogTitle>
+                  <DialogDescription>Enter the DID number from your Asterisk/SIP trunk.</DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4 pt-2">
+                  <div>
+                    <label className="text-sm font-medium mb-1 block">Phone Number *</label>
+                    <div className="relative">
+                      <Hash className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input placeholder="919876543210" value={newNumber}
+                        onChange={e => setNewNumber(e.target.value)} className="pl-10" />
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">Enter digits only, with country code (e.g. 91XXXXXXXXXX)</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium mb-1 block">Label / Description</label>
+                    <Input placeholder="KSRTC Support Line" value={newLabel}
+                      onChange={e => setNewLabel(e.target.value)} />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium mb-1 block">Assign to Company (optional)</label>
+                    <Select value={newNumberCompany} onValueChange={setNewNumberCompany}>
+                      <SelectTrigger><SelectValue placeholder="Unassigned" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">Unassigned</SelectItem>
+                        {companies.map(c => <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <DialogFooter className="pt-2">
+                  <Button onClick={handleAddNumber} disabled={addingNumber || !newNumber} className="w-full">
+                    {addingNumber ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckCircle2 className="mr-2 h-4 w-4" />}
+                    Add to Pool
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          </div>
+        </CardHeader>
+        <CardContent className="p-0">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-gray-50/50 text-caption font-semibold text-muted-foreground border-b border-gray-100">
+                  <th className="px-6 py-4">Phone Number</th>
+                  <th className="px-6 py-4">Label</th>
+                  <th className="px-6 py-4">Status</th>
+                  <th className="px-6 py-4">Assigned To</th>
+                  <th className="px-6 py-4">Provider</th>
+                  <th className="px-6 py-4 text-right">Reassign</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {didLoading ? (
+                  <tr><td colSpan={6} className="px-6 py-8 text-center">
+                    <Loader2 className="h-5 w-5 animate-spin mx-auto text-muted-foreground" />
+                  </td></tr>
+                ) : didNumbers.length === 0 ? (
+                  <tr><td colSpan={6} className="px-6 py-12 text-center text-muted-foreground">
+                    No phone numbers in pool yet.
+                  </td></tr>
+                ) : didNumbers.map((num) => (
+                  <tr key={num.id} className="hover:bg-gray-50/50 transition-colors">
+                    <td className="px-6 py-4 font-mono text-sm font-semibold">+{num.phone_number}</td>
+                    <td className="px-6 py-4 text-sm text-muted-foreground">{num.label || '—'}</td>
+                    <td className="px-6 py-4">
+                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                        num.is_active ? 'bg-green-50 text-green-700' : 'bg-gray-100 text-gray-500'
+                      }`}>
+                        <div className={`h-1.5 w-1.5 rounded-full ${num.is_active ? 'bg-green-500' : 'bg-gray-400'}`} />
+                        {num.is_active ? 'Active' : 'Inactive'}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4">
+                      {num.company_name
+                        ? <span className="inline-flex items-center gap-1 text-sm font-medium text-primary">
+                            <Building2 className="h-3 w-3" /> {num.company_name}
+                          </span>
+                        : <span className="text-muted-foreground text-sm italic">Unassigned</span>
+                      }
+                    </td>
+                    <td className="px-6 py-4 text-sm text-muted-foreground">{num.provider}</td>
+                    <td className="px-6 py-4 text-right">
+                      <Select
+                        defaultValue={num.company_id ? String(num.company_id) : ''}
+                        onValueChange={(val) => handleAssignNumber(num.id, val)}
+                      >
+                        <SelectTrigger className="w-40 h-8 text-xs">
+                          <SelectValue placeholder="Reassign..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="">Unassigned</SelectItem>
+                          {companies.map(c => <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
                     </td>
                   </tr>
                 ))}

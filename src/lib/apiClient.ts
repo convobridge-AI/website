@@ -429,6 +429,25 @@ class APIClient {
   async getAllCallsAdmin() {
     return { calls: [] };
   }
+
+  // Razorpay: Create outbound topup order
+  async createRazorpayOrder(companyId: number | string, amount: number) {
+    const apiKey = (import.meta as any).env?.VITE_API_SECRET_KEY || localStorage.getItem('api_secret_key') || '';
+    const baseUrl = (import.meta as any).env?.VITE_API_BASE_URL || '';
+    const res = await fetch(`${baseUrl}/api/payments/create-order`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({ company_id: companyId, amount }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ error: res.statusText }));
+      throw new Error(err.error || 'Failed to create Razorpay order');
+    }
+    return res.json();
+  }
 }
 
 export const apiClient = new APIClient();

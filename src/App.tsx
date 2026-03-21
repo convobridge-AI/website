@@ -20,6 +20,7 @@ import DashboardDemo from "./pages/DashboardDemo";
 import AgentBuilder from "./pages/AgentBuilder";
 import Admin from "./pages/Admin";
 import Settings from "./pages/Settings";
+import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -50,6 +51,7 @@ const App = () => {
               <Route path="/careers" element={<Careers />} />
               <Route path="/login" element={<Login />} />
               <Route path="/signup" element={<Signup />} />
+              <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/dashboard-demo" element={<DashboardDemo />} />
               <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
               <Route path="/agent-builder" element={<ProtectedRoute><AgentBuilder /></ProtectedRoute>} />

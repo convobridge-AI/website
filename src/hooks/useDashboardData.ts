@@ -47,6 +47,7 @@ export const useDashboardData = () => {
         totalCost,
         leadsCount: leadsData.length,
         credits: companyData?.credit_balance || 0,
+        outbound_balance: companyData?.outbound_balance || 0,
         successRate: totalCalls > 0 ? successfulCalls / totalCalls : 1,
         company: companyData
       });

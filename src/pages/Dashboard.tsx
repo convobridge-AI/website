@@ -3,7 +3,7 @@ import {
   Home, PhoneIncoming, Bot, Users, Settings, LogOut, Menu, X, Phone,
   BarChart3, TrendingUp, Clock, Search, Plus, MoreVertical, ArrowUpRight,
   ArrowDownRight, Eye, Download, ChevronLeft, ChevronRight,
-  AlertCircle, Zap, CheckCircle2, Loader, PlayCircle
+  AlertCircle, Zap, CheckCircle2, Loader, PlayCircle, Play
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PremiumAudioPlayer } from "@/components/PremiumAudioPlayer";
@@ -42,6 +42,9 @@ export default function Dashboard() {
   const [userName, setUserName] = useState("User");
   const [systemPrompt, setSystemPrompt] = useState("");
   const [isSavingPrompt, setIsSavingPrompt] = useState(false);
+  const [topupOpen, setTopupOpen] = useState(false);
+  const [topupAmount, setTopupAmount] = useState("500");
+  const [topupLoading, setTopupLoading] = useState(false);
 
   // Fetch real data from Supabase
   const { stats, calls, agents, leads, topups, loading, refresh } = useDashboardData();
@@ -62,10 +65,8 @@ export default function Dashboard() {
         user_id_param: user.id,
         new_prompt: systemPrompt
       });
-      
       if (error) throw error;
       if (!data?.success) throw new Error(data?.error || 'Failed to update prompt');
-      
       toast({ title: "System prompt updated successfully" });
       refresh();
     } catch (err: any) {
@@ -73,6 +74,44 @@ export default function Dashboard() {
       toast({ title: "Failed to update system prompt", variant: "destructive" });
     } finally {
       setIsSavingPrompt(false);
+    }
+  };
+
+  // Razorpay topup: create order on backend, open checkout popup
+  const handleTopup = async () => {
+    const amount = parseFloat(topupAmount);
+    if (isNaN(amount) || amount < 1) {
+      toast({ title: "Enter a valid amount (min ₹1)", variant: "destructive" });
+      return;
+    }
+    if (!stats?.company?.id) {
+      toast({ title: "Company not loaded yet", variant: "destructive" });
+      return;
+    }
+    setTopupLoading(true);
+    try {
+      const order = await apiClient.createRazorpayOrder(stats.company.id, amount);
+      const options = {
+        key: order.key_id,
+        amount: order.amount,
+        currency: order.currency,
+        name: "ConvoBridge",
+        description: "Outbound Balance Top-Up",
+        order_id: order.order_id,
+        handler: () => {
+          toast({ title: `₹${amount.toFixed(2)} top-up initiated! Balance updates within seconds.` });
+          setTopupOpen(false);
+          setTimeout(() => refresh(), 3000);
+        },
+        theme: { color: "#6366f1" }
+      };
+      // @ts-ignore — Razorpay is loaded via CDN script in index.html
+      const rzp = new (window as any).Razorpay(options);
+      rzp.open();
+    } catch (e: any) {
+      toast({ title: `Top-up failed: ${e.message}`, variant: "destructive" });
+    } finally {
+      setTopupLoading(false);
     }
   };
 
@@ -542,7 +581,7 @@ export default function Dashboard() {
           <div className="flex-1 relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Search by agent or number..."
+              placeholder="Search by caller or DID..."
               value={callsSearch}
               onChange={(e) => {
                 setCallsSearch(e.target.value);
@@ -573,11 +612,11 @@ export default function Dashboard() {
             <thead className="bg-muted/50 border-b">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-semibold text-muted-foreground">Time</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-muted-foreground">Agent</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-muted-foreground">Number</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-muted-foreground">Caller Number</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-muted-foreground">DID (Called)</th>
                 <th className="px-6 py-3 text-left text-xs font-semibold text-muted-foreground">Duration</th>
                 <th className="px-6 py-3 text-left text-xs font-semibold text-muted-foreground">Status</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-muted-foreground">Outcome</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-muted-foreground">Cost</th>
                 <th className="px-6 py-3 text-left text-xs font-semibold text-muted-foreground">Details</th>
               </tr>
             </thead>
@@ -590,18 +629,19 @@ export default function Dashboard() {
                 </tr>
               ) : paginatedCalls.length > 0 ? (
                 paginatedCalls.map((call: any) => (
-                  <tr key={call._id} className="hover:bg-muted/50 transition-colors">
-                    <td className="px-6 py-4 text-sm text-muted-foreground">{formatTime(call.startedAt)}</td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-2">
-                        <div className="h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center">
-                          <Bot className="h-4 w-4 text-primary" />
-                        </div>
-                        <span className="text-sm font-medium">{call.agentId?.name || 'Unknown'}</span>
-                      </div>
+                  <tr key={call.id} className="hover:bg-muted/50 transition-colors">
+                    <td className="px-6 py-4 text-sm text-muted-foreground">
+                      {formatTime(call.started_at)}
                     </td>
-                    <td className="px-6 py-4 text-sm font-mono">{call.phoneNumber || '—'}</td>
-                    <td className="px-6 py-4 text-sm font-mono">{formatDuration(call.duration)}</td>
+                    <td className="px-6 py-4 text-sm font-mono font-semibold">
+                      {call.caller_number || '—'}
+                    </td>
+                    <td className="px-6 py-4 text-sm font-mono text-muted-foreground">
+                      {call.metadata?.dialed_number || call.metadata?.call_tag || '—'}
+                    </td>
+                    <td className="px-6 py-4 text-sm font-mono">
+                      {formatDuration(call.duration_sec)}
+                    </td>
                     <td className="px-6 py-4">
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${
                         call.status === 'completed' ? 'bg-green-500/10 text-green-600' :
@@ -610,21 +650,31 @@ export default function Dashboard() {
                         call.status === 'answered' ? 'bg-blue-500/10 text-blue-600' :
                         'bg-yellow-500/10 text-yellow-600'
                       }`}>
-                        {call.status}
+                        {call.status || 'unknown'}
                       </span>
                     </td>
-                    <td className="px-6 py-4">
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-purple-500/10 text-purple-600">
-                        {call.outcome || '—'}
-                      </span>
+                    <td className="px-6 py-4 text-sm">
+                      {call.cost != null ? `₹${Number(call.cost).toFixed(2)}` : '—'}
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-6 py-4 flex items-center gap-2">
+                      {call.recording_url && (
+                        <a
+                          href={call.recording_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-green-600 hover:text-green-700 transition-colors"
+                          title="Play recording"
+                        >
+                          <Play className="h-4 w-4" />
+                        </a>
+                      )}
                       <button
                         onClick={() => {
                           setSelectedCall(call);
                           setCallDetailOpen(true);
                         }}
                         className="text-primary hover:text-primary/80 transition-colors"
+                        title="View transcript"
                       >
                         <Eye className="h-4 w-4" />
                       </button>
@@ -762,18 +812,59 @@ export default function Dashboard() {
     <div className="space-y-8 animate-fade-in-up">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-h2 font-semibold mb-2">Usage & Billing</h2>
-          <p className="text-muted-foreground">Monitor your consumption and credit balance</p>
+          <h2 className="text-h2 font-semibold mb-2">Usage &amp; Billing</h2>
+          <p className="text-muted-foreground">Monitor consumption and credit balances</p>
         </div>
-        <div className="bg-primary/5 border border-primary/20 rounded-2xl p-6 flex items-center gap-6 backdrop-blur-sm">
-          <div>
-            <p className="text-xs font-bold uppercase tracking-widest text-primary mb-1">Available Credits</p>
-            <p className="text-4xl font-bold text-foreground">${Number(stats?.credits || 0).toFixed(2)}</p>
+        {/* Dual wallet cards */}
+        <div className="flex gap-4">
+          {/* Inbound (AI call minutes) */}
+          <div className="bg-primary/5 border border-primary/20 rounded-2xl p-5 min-w-[180px]">
+            <p className="text-xs font-bold uppercase tracking-widest text-primary mb-1">Inbound Credits</p>
+            <p className="text-3xl font-bold text-foreground">₹{Number(stats?.credits || 0).toFixed(2)}</p>
+            <p className="text-xs text-muted-foreground mt-1">AI call minutes</p>
           </div>
-          <Button className="h-12 px-6 rounded-xl shadow-lg shadow-primary/20">
-            <Plus className="mr-2 h-5 w-5" />
-            Add Credits
-          </Button>
+          {/* Outbound (campaigns / broadcasts) */}
+          <div className="bg-orange-500/5 border border-orange-400/20 rounded-2xl p-5 min-w-[180px]">
+            <p className="text-xs font-bold uppercase tracking-widest text-orange-500 mb-1">Outbound Balance</p>
+            <p className="text-3xl font-bold text-foreground">₹{Number(stats?.outbound_balance || 0).toFixed(2)}</p>
+            <Dialog open={topupOpen} onOpenChange={setTopupOpen}>
+              <DialogTrigger asChild>
+                <Button size="sm" variant="outline" className="mt-2 border-orange-400/40 text-orange-600 hover:bg-orange-500/10">
+                  <Plus className="mr-1 h-4 w-4" /> Top Up
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Top Up Outbound Balance</DialogTitle>
+                  <DialogDescription>Add money to your outbound campaign wallet via Razorpay.</DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4 pt-2">
+                  <div>
+                    <p className="text-sm font-medium mb-2">Amount (INR ₹)</p>
+                    <div className="flex gap-2 mb-3">
+                      {["500","1000","2000","5000"].map(a => (
+                        <button key={a} onClick={() => setTopupAmount(a)}
+                          className={`px-3 py-1.5 rounded-lg text-sm font-medium border transition-all ${
+                            topupAmount === a ? "bg-primary text-primary-foreground border-primary" : "hover:border-primary/50"
+                          }`}>₹{a}</button>
+                      ))}
+                    </div>
+                    <Input
+                      type="number" min={1}
+                      value={topupAmount}
+                      onChange={e => setTopupAmount(e.target.value)}
+                      placeholder="Custom amount"
+                    />
+                  </div>
+                  <Button onClick={handleTopup} disabled={topupLoading} className="w-full">
+                    {topupLoading ? <Loader className="mr-2 h-4 w-4 animate-spin" /> : <Zap className="mr-2 h-4 w-4" />}
+                    Pay ₹{topupAmount} via Razorpay
+                  </Button>
+                  <p className="text-xs text-muted-foreground text-center">Secured by Razorpay • Balance credited instantly after payment</p>
+                </div>
+              </DialogContent>
+            </Dialog>
+          </div>
         </div>
       </div>
 
