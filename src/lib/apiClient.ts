@@ -325,10 +325,13 @@ class APIClient {
       company_id: this.currentUser.company_id
     };
 
-    const apiKey = localStorage.getItem('api_secret_key') || (import.meta as any).env?.VITE_API_SECRET_KEY || '';
-    const baseUrl = (import.meta as any).env?.VITE_API_BASE_URL || 'http://localhost:3000';
-    
-    const res = await fetch(`${baseUrl}/api/campaign/${type}`, {
+    const apiKey = localStorage.getItem('api_secret_key') || this.currentUser?.api_key || '';
+    if (!apiKey) {
+      throw new Error('Missing API key. Please re-login to generate an API key.');
+    }
+    // Use Vercel Serverless Functions (same-origin) to avoid mixed content and to
+    // keep outbound calling behind a stable frontend origin.
+    const res = await fetch(`/api/campaign/${type}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -418,6 +421,7 @@ class APIClient {
         transcriptionEnabled: true,
         notificationsEnabled: true,
         emailNotifications: false,
+        apiKey: this.currentUser?.api_key || localStorage.getItem('api_secret_key') || ''
       } 
     };
   }
@@ -510,16 +514,18 @@ class APIClient {
   }
 
   // Razorpay: Create outbound topup order
-  async createRazorpayOrder(companyId: number | string, amount: number) {
-    const apiKey = (import.meta as any).env?.VITE_API_SECRET_KEY || localStorage.getItem('api_secret_key') || '';
-    const baseUrl = (import.meta as any).env?.VITE_API_BASE_URL || '';
-    const res = await fetch(`${baseUrl}/api/payments/create-order`, {
+  async createRazorpayOrder(companyId: number | string, amount: number, wallet: 'outbound' | 'inbound' = 'outbound') {
+    const apiKey = localStorage.getItem('api_secret_key') || this.currentUser?.api_key || '';
+    if (!apiKey) {
+      throw new Error('Missing API key. Please re-login to top up.');
+    }
+    const res = await fetch(`/api/payments/create-order`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${apiKey}`,
       },
-      body: JSON.stringify({ company_id: companyId, amount }),
+      body: JSON.stringify({ wallet, company_id: companyId, amount }),
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({ error: res.statusText }));

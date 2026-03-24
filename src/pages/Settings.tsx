@@ -108,7 +108,8 @@ export default function Settings() {
   const handleRegenerateApiKey = async () => {
     try {
       const res = await apiClient.regenerateApiKey();
-      setSettings(res.settings);
+      // res contains { apiKey: string }
+      setSettings((prev: any) => ({ ...prev, apiKey: res.apiKey }));
       toast({ title: 'API key regenerated successfully' });
     } catch (err) {
       toast({ title: 'Failed to regenerate API key', variant: 'destructive' });

@@ -3,10 +3,6 @@ import { Button } from "@/components/ui/button";
 import { LiveDemoWidget } from "@/components/LiveDemoWidget";
 import { AuroraBackground } from "@/components/AuroraBackground";
 import { GridPattern } from "@/components/GridPattern";
-import { OrbitalRings } from "@/components/OrbitalRings";
-import { HolographicOrb } from "@/components/HolographicOrb";
-import { BackgroundPaths } from "@/components/ui/background-paths";
-import { CpuArchitecture } from "@/components/ui/cpu-architecture";
 import NavBar from "@/components/NavBar";
 import Footer from "@/components/Footer";
 
@@ -18,32 +14,17 @@ export default function Home() {
       {/* Hero */}
       <section className="relative pt-28 pb-20 md:pt-36 md:pb-28 overflow-hidden isolate">
 
-        <AuroraBackground />
-        <GridPattern className="opacity-40" />
-        
-        {/* Background Paths — animated flowing lines */}
-        <div className="absolute inset-0 pointer-events-none opacity-30">
-          <BackgroundPaths title="" />
-        </div>
+        <AuroraBackground className="opacity-70" />
 
-        <OrbitalRings className="top-1/2 right-0 -translate-y-1/2 translate-x-1/4 hidden lg:block" size={600} />
-
-        {/* CPU Architecture — tech accent */}
-        <div className="absolute bottom-8 right-8 hidden lg:block opacity-40 pointer-events-none w-[320px] h-[160px]">
-          <CpuArchitecture text="AI" className="text-primary/50" />
-        </div>
-
-        {/* 3D Holographic Orb — hero accent */}
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 hidden lg:block opacity-20 pointer-events-none">
-          <HolographicOrb size={800} />
+        {/* Gentle wash to keep the hero clean/readable */}
+        <div className="absolute inset-0 pointer-events-none">
+          <div className="absolute inset-0 bg-gradient-to-b from-background/0 via-background/30 to-background" />
         </div>
 
         <div className="relative z-10 max-w-6xl mx-auto px-6">
-          <div className="grid lg:grid-cols-[1.3fr,1fr] gap-16 items-start">
-            <div className="space-y-8">
-              <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-medium glass-card"
-                style={{ border: "1px solid hsla(217 91% 50% / 0.15)" }}
-              >
+          <div className="grid lg:grid-cols-[1.15fr,1fr] gap-12 lg:gap-16 items-center">
+            <div className="space-y-7">
+              <div className="inline-flex items-center gap-2 rounded-full px-4 py-2 text-xs font-medium glass-card">
                 <Sparkles className="h-3.5 w-3.5 text-primary" />
                 <span className="text-muted-foreground">Powered by advanced AI</span>
               </div>
@@ -60,7 +41,7 @@ export default function Home() {
               </p>
 
               <div className="flex flex-wrap gap-3">
-                <Button size="lg" className="rounded-xl text-base px-6 bg-primary text-primary-foreground hover:brightness-110 shadow-[0_0_30px_-5px_hsla(217,91%,50%,0.3)]">
+                <Button size="lg" className="rounded-xl text-base px-6 holo-border holo-glow">
                   Start Free Trial
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
@@ -74,8 +55,10 @@ export default function Home() {
               </p>
             </div>
 
-            <div className="lg:mt-4">
-              <LiveDemoWidget variant="hero" />
+            <div className="lg:mt-2">
+              <div className="glass-card rounded-3xl p-3 md:p-4 holo-border">
+                <LiveDemoWidget variant="hero" />
+              </div>
             </div>
           </div>
         </div>
