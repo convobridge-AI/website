@@ -56,6 +56,7 @@ export default function Dashboard() {
   const [campaignAgent, setCampaignAgent] = useState("");
   const [campaignText, setCampaignText] = useState("");
   const [campaignTtsProvider, setCampaignTtsProvider] = useState<'google' | 'sarvam'>('google');
+  const [campaignGoogleVoice, setCampaignGoogleVoice] = useState<string>('en-IN-Chirp3-HD-Puck');
   const [campaignCloudUrl, setCampaignCloudUrl] = useState("");
   const [isLaunchingCampaign, setIsLaunchingCampaign] = useState(false);
   const [campaignResult, setCampaignResult] = useState<any>(null);
@@ -131,12 +132,17 @@ export default function Dashboard() {
     if (campaignMode === 'tts') {
       basePayload.text = campaignText;
       basePayload.provider = campaignTtsProvider;
+      // Pass specific Chirp3-HD voice for Google TTS campaigns
+      if (campaignTtsProvider === 'google' && campaignGoogleVoice) {
+        basePayload.voice_name = campaignGoogleVoice;
+      }
     }
     if (campaignMode === 'audio') {
       basePayload.cloudUrl = campaignCloudUrl;
     }
     if (campaignMode === 'ai') {
-      basePayload.agent_id = campaignAgent;
+      // agent_id: UUID of the outbound AI agent to use
+      basePayload.agent_id = campaignAgent || null;
     }
 
     setIsLaunchingCampaign(true);
@@ -942,13 +948,62 @@ export default function Dashboard() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="google">🌐 Google Wavenet (English/Multi)</SelectItem>
+                      <SelectItem value="google">🌐 Google Chirp3-HD (English/Multi)</SelectItem>
                       <SelectItem value="sarvam">🇮🇳 Sarvam Bulbul (Hindi/Indian)</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
+                {/* Google voice picker — only when Google is selected */}
+                {campaignTtsProvider === 'google' && (
+                  <div className="space-y-1.5">
+                    <label className="text-sm font-medium">Google Voice</label>
+                    <div className="flex gap-2">
+                      <Select value={campaignGoogleVoice} onValueChange={setCampaignGoogleVoice}>
+                        <SelectTrigger className="flex-1">
+                          <SelectValue placeholder="Select a voice..." />
+                        </SelectTrigger>
+                        <SelectContent className="max-h-64">
+                          {[
+                            { id: "Puck", gender: "M", desc: "Energetic" }, { id: "Kore", gender: "F", desc: "Professional" },
+                            { id: "Charon", gender: "M", desc: "Authoritative" }, { id: "Fenrir", gender: "M", desc: "Confident" },
+                            { id: "Aoede", gender: "F", desc: "Melodic" }, { id: "Leda", gender: "F", desc: "Gentle" },
+                            { id: "Orus", gender: "M", desc: "Calm" }, { id: "Zephyr", gender: "M", desc: "Casual" },
+                            { id: "Achernar", gender: "F", desc: "Expressive" }, { id: "Achird", gender: "M", desc: "Friendly" },
+                            { id: "Algenib", gender: "M", desc: "Trustworthy" }, { id: "Algieba", gender: "F", desc: "Resonant" },
+                            { id: "Autonoe", gender: "F", desc: "Spirited" }, { id: "Callirrhoe", gender: "F", desc: "Flowing" },
+                            { id: "Despina", gender: "F", desc: "Precise" }, { id: "Enceladus", gender: "M", desc: "Direct" },
+                            { id: "Erinome", gender: "F", desc: "Soft" }, { id: "Gacrux", gender: "M", desc: "Welcoming" },
+                            { id: "Iapetus", gender: "M", desc: "Deep calm" }, { id: "Laomedeia", gender: "F", desc: "Elegant" },
+                            { id: "Pulcherrima", gender: "F", desc: "Bright" }, { id: "Rasalgethi", gender: "M", desc: "Bold" },
+                            { id: "Sadachbia", gender: "M", desc: "Balanced" }, { id: "Sadaltager", gender: "M", desc: "Reassuring" },
+                            { id: "Schedar", gender: "F", desc: "Crisp" }, { id: "Sulafat", gender: "F", desc: "Warm" },
+                            { id: "Umbriel", gender: "M", desc: "Steady" }, { id: "Vindemiatrix", gender: "F", desc: "Dynamic" },
+                            { id: "Zubenelgenubi", gender: "M", desc: "Rich" },
+                          ].map(v => (
+                            <SelectItem key={v.id} value={`en-IN-Chirp3-HD-${v.id}`}>
+                              {v.id} ({v.gender}) — {v.desc}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <button
+                        type="button"
+                        title="Preview voice"
+                        onClick={() => {
+                          const id = campaignGoogleVoice.split('-').pop()?.toLowerCase();
+                          if (id) new Audio(`/voices/chirp3-hd-${id}.wav`).play().catch(() => {});
+                        }}
+                        className="px-3 py-2 border rounded-md hover:bg-muted transition-colors text-sm"
+                      >
+                        ▶
+                      </button>
+                    </div>
+                    <p className="text-xs text-muted-foreground">Google Chirp3-HD — high quality neural voices</p>
+                  </div>
+                )}
               </>
             )}
+
 
             {/* === Audio File Mode === */}
             {campaignMode === 'audio' && (

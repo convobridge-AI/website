@@ -17,13 +17,12 @@ const MIN_PLAYBACK_BUFFER = 0.05; // Minimum 50ms of audio before starting playb
 
 export type ConnectionState = 'idle' | 'connecting' | 'connected' | 'error';
 
-// Map Agent Builder voices to Gemini voice names
-const VOICE_MAP: Record<string, string> = {
-  'aria': 'Aoede',      // Female, warm
-  'guy': 'Puck',        // Male, energetic
-  'jenny': 'Kore',      // Female, professional
-  'chris': 'Charon',    // Male, deep
-};
+// Voice IDs are the Gemini voice names in lowercase (e.g. "puck", "kore", "fenrir").
+// Title-case them before sending to the API.  No map needed — new voices work automatically.
+function toGeminiVoiceName(voiceId?: string): string {
+  if (!voiceId) return 'Kore';
+  return voiceId.charAt(0).toUpperCase() + voiceId.slice(1).toLowerCase();
+}
 
 interface UseLiveApiOptions {
   systemPrompt?: string;
@@ -199,8 +198,8 @@ export function useLiveApi(): UseLiveApiReturn {
         systemInstruction += `\n\nTest Scenario: The user is calling with the following scenario: ${options.testScenario}. Respond appropriately to this caller type.`;
       }
 
-      // Map voice to Gemini voice name
-      const geminiVoice = options?.voice ? (VOICE_MAP[options.voice] || 'Kore') : 'Kore';
+      // Resolve voice: IDs are lowercase Gemini names, title-case before sending
+      const geminiVoice = toGeminiVoiceName(options?.voice);
 
       // Connect to Gemini Live
       const sessionPromise = ai.live.connect({

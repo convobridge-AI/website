@@ -27,7 +27,8 @@ export default function AgentBuilder() {
   
   // Step 2: Configuration
   const [agentName, setAgentName] = useState("Sales Agent");
-  const [selectedVoice, setSelectedVoice] = useState("aria");
+  const [selectedVoice, setSelectedVoice] = useState("puck");
+  const [playingVoice, setPlayingVoice] = useState<string | null>(null);
   const [languages, setLanguages] = useState(["English", "Spanish"]);
   const [personality, setPersonality] = useState(60); // 0 = Formal, 100 = Friendly
   
@@ -66,11 +67,44 @@ export default function AgentBuilder() {
   ];
 
   const voices = [
-    { id: "aria", name: "Aria", gender: "Female", accent: "American" },
-    { id: "guy", name: "Guy", gender: "Male", accent: "American" },
-    { id: "jenny", name: "Jenny", gender: "Female", accent: "British" },
-    { id: "chris", name: "Chris", gender: "Male", accent: "Australian" }
+    { id: "puck",          name: "Puck",          gender: "Male",   description: "Energetic, upbeat" },
+    { id: "kore",          name: "Kore",           gender: "Female", description: "Professional, clear" },
+    { id: "charon",        name: "Charon",         gender: "Male",   description: "Deep, authoritative" },
+    { id: "fenrir",        name: "Fenrir",         gender: "Male",   description: "Confident, strong" },
+    { id: "aoede",         name: "Aoede",          gender: "Female", description: "Warm, melodic" },
+    { id: "leda",          name: "Leda",           gender: "Female", description: "Gentle, caring" },
+    { id: "orus",          name: "Orus",           gender: "Male",   description: "Calm, neutral" },
+    { id: "zephyr",        name: "Zephyr",         gender: "Male",   description: "Breezy, casual" },
+    { id: "achernar",      name: "Achernar",       gender: "Female", description: "Bright, expressive" },
+    { id: "achird",        name: "Achird",         gender: "Male",   description: "Friendly, warm" },
+    { id: "algenib",       name: "Algenib",        gender: "Male",   description: "Steady, trustworthy" },
+    { id: "algieba",       name: "Algieba",        gender: "Female", description: "Rich, resonant" },
+    { id: "autonoe",       name: "Autonoe",        gender: "Female", description: "Lively, spirited" },
+    { id: "callirrhoe",    name: "Callirrhoe",     gender: "Female", description: "Smooth, flowing" },
+    { id: "despina",       name: "Despina",        gender: "Female", description: "Clear, precise" },
+    { id: "enceladus",     name: "Enceladus",      gender: "Male",   description: "Firm, direct" },
+    { id: "erinome",       name: "Erinome",        gender: "Female", description: "Soft, gentle" },
+    { id: "gacrux",        name: "Gacrux",         gender: "Male",   description: "Warm, welcoming" },
+    { id: "iapetus",       name: "Iapetus",        gender: "Male",   description: "Deep, calm" },
+    { id: "laomedeia",     name: "Laomedeia",      gender: "Female", description: "Elegant, refined" },
+    { id: "pulcherrima",   name: "Pulcherrima",    gender: "Female", description: "Expressive, bright" },
+    { id: "rasalgethi",    name: "Rasalgethi",     gender: "Male",   description: "Bold, commanding" },
+    { id: "sadachbia",     name: "Sadachbia",      gender: "Male",   description: "Balanced, neutral" },
+    { id: "sadaltager",    name: "Sadaltager",     gender: "Male",   description: "Gentle, reassuring" },
+    { id: "schedar",       name: "Schedar",        gender: "Female", description: "Crisp, efficient" },
+    { id: "sulafat",       name: "Sulafat",        gender: "Female", description: "Melodic, warm" },
+    { id: "umbriel",       name: "Umbriel",        gender: "Male",   description: "Steady, professional" },
+    { id: "vindemiatrix",  name: "Vindemiatrix",   gender: "Female", description: "Vibrant, dynamic" },
+    { id: "zubenelgenubi", name: "Zubenelgenubi",  gender: "Male",   description: "Rich, resonant" },
   ];
+
+  const playVoicePreview = (voiceId: string) => {
+    const audio = new Audio(`/voices/chirp3-hd-${voiceId}.wav`);
+    setPlayingVoice(voiceId);
+    audio.play().catch(() => {});
+    audio.onended = () => setPlayingVoice(null);
+    audio.onerror = () => setPlayingVoice(null);
+  };
 
   const availableLanguages = [
     "English",
@@ -179,7 +213,7 @@ export default function AgentBuilder() {
     if (!agentId) {
       toast({
         title: "Error",
-        description: "Agent ID not found. Please try creating the agent again.",
+        description: "Agent ID not found. Please complete steps 1–4 first.",
         variant: "destructive",
       });
       return;
@@ -187,26 +221,22 @@ export default function AgentBuilder() {
 
     try {
       setIsDeploying(true);
-      
-      // Deploy the agent via API (this assigns Asterisk extension)
-      const response = await apiClient.deployAgent(agentId);
+
+      // Mark agent as deployed in Supabase (is_deployed = true)
+      await apiClient.updateAgent(agentId, { is_deployed: true, is_active: true });
 
       toast({
-        title: "Agent deployed successfully!",
-        description: `Extension ${response.deployment.extension} assigned. Your agent is now live.`,
+        title: "✅ Agent deployed!",
+        description: `"${agentName}" is now active. Go to the Dashboard → Phone Numbers to set it as the primary inbound agent on a DID.`,
       });
 
-      // Show deployment details
-      console.log('Deployment config:', response.deployment);
-      
-      // Redirect to dashboard
       setTimeout(() => {
         window.location.href = "/dashboard";
-      }, 2000);
+      }, 2500);
     } catch (error: any) {
       toast({
         title: "Error deploying agent",
-        description: error.response?.data?.message || "Failed to deploy agent",
+        description: error.message || "Failed to deploy agent",
         variant: "destructive",
       });
     } finally {
@@ -236,20 +266,23 @@ export default function AgentBuilder() {
       if (currentStep === 4 && !agentId && !creatingAgent) {
         try {
           setCreatingAgent(true);
+          // Voice is stored as title-cased Gemini name (e.g. "Puck") — backend loads it directly
+          const voiceName = selectedVoice.charAt(0).toUpperCase() + selectedVoice.slice(1);
           const response = await apiClient.createAgent({
             name: `${agentName} (Draft)`,
             type: selectedTemplate.toLowerCase().replace(" agent", ""),
             systemPrompt,
-            voice: selectedVoice,
+            voice: voiceName,
             languages,
             personality: personality < 33 ? "formal" : personality < 67 ? "balanced" : "friendly",
             isDeployed: false
           });
-          setAgentId(response.agent._id);
+          // Supabase returns UUID in .id (not ._id)
+          setAgentId(response.agent.id || response.agent._id);
         } catch (error: any) {
           toast({
             title: "Error creating draft agent",
-            description: error.response?.data?.message || "Failed to create draft agent",
+            description: error.message || "Failed to create draft agent. Please check your connection.",
             variant: "destructive",
           });
         } finally {
@@ -378,30 +411,40 @@ export default function AgentBuilder() {
                 {/* Voice Selection */}
                 <div className="space-y-3">
                   <label className="text-body-small font-semibold">Voice</label>
-                  <div className="space-y-2">
+                  <p className="text-caption text-muted-foreground">29 Google Chirp3-HD voices — click ▶ to preview</p>
+                  <div className="grid grid-cols-2 gap-2 max-h-72 overflow-y-auto pr-1">
                     {voices.map((voice) => (
                       <button
                         key={voice.id}
                         onClick={() => setSelectedVoice(voice.id)}
-                        className={`w-full p-4 border rounded-lg text-left transition-all flex items-center justify-between group ${
+                        className={`p-3 border rounded-lg text-left transition-all flex items-start justify-between gap-2 ${
                           selectedVoice === voice.id
                             ? "border-primary bg-primary/5"
                             : "border-border hover:border-primary/50"
                         }`}
                       >
-                        <div>
-                          <p className="font-semibold">{voice.name}</p>
-                          <p className="text-sm text-muted-foreground">
-                            {voice.gender} • {voice.accent}
-                          </p>
+                        <div className="min-w-0 flex-1">
+                          <p className="font-semibold text-sm truncate">{voice.name}</p>
+                          <p className="text-xs text-muted-foreground truncate">{voice.description}</p>
+                          <span className={`inline-block mt-1 text-[10px] px-1.5 py-0.5 rounded-full font-medium ${
+                            voice.gender === "Female"
+                              ? "bg-pink-100 text-pink-700 dark:bg-pink-900/30 dark:text-pink-300"
+                              : "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300"
+                          }`}>
+                            {voice.gender}
+                          </span>
                         </div>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="opacity-0 group-hover:opacity-100 transition-opacity"
+                        <button
+                          type="button"
+                          onClick={(e) => { e.stopPropagation(); playVoicePreview(voice.id); }}
+                          className="flex-shrink-0 p-1.5 rounded-md hover:bg-muted transition-colors"
+                          title="Preview voice"
                         >
-                          <Play className="h-4 w-4" />
-                        </Button>
+                          {playingVoice === voice.id
+                            ? <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />
+                            : <Play className="h-3.5 w-3.5 text-muted-foreground hover:text-primary" />
+                          }
+                        </button>
                       </button>
                     ))}
                   </div>
