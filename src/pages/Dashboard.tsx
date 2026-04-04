@@ -1,9 +1,9 @@
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, useRef } from "react";
 import {
   Home, PhoneIncoming, Bot, Users, Settings, LogOut, Menu, X, Phone,
   BarChart3, TrendingUp, Clock, Search, Plus, MoreVertical, ArrowUpRight,
   ArrowDownRight, Eye, Download, ChevronLeft, ChevronRight,
-  AlertCircle, Zap, CheckCircle2, Loader, PlayCircle, Play, Megaphone
+  AlertCircle, Zap, CheckCircle2, Loader, PlayCircle, Play, Megaphone, Square
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PremiumAudioPlayer } from "@/components/PremiumAudioPlayer";
@@ -60,13 +60,34 @@ export default function Dashboard() {
   const [campaignCloudUrl, setCampaignCloudUrl] = useState("");
   const [isLaunchingCampaign, setIsLaunchingCampaign] = useState(false);
   const [campaignResult, setCampaignResult] = useState<any>(null);
+  const [playingTtsVoice, setPlayingTtsVoice] = useState<string | null>(null);
+  const campaignAudioRef = useRef<HTMLAudioElement | null>(null);
 
   // API Key State
   const [apiKey, setApiKey] = useState<string>(localStorage.getItem("api_secret_key") || "");
   const [showApiKey, setShowApiKey] = useState(false);
 
   // Fetch real data from Supabase
-  const { stats, calls, agents, leads, topups, loading, refresh, outboundCalls } = useDashboardData();
+  // Voice Data
+  const GOOGLE_CHIRP_VOICES = [
+    { id: "Puck", gender: "M", desc: "Energetic" }, { id: "Kore", gender: "F", desc: "Professional" },
+    { id: "Charon", gender: "M", desc: "Authoritative" }, { id: "Fenrir", gender: "M", desc: "Confident" },
+    { id: "Aoede", gender: "F", desc: "Melodic" }, { id: "Leda", gender: "F", desc: "Gentle" },
+    { id: "Orus", gender: "M", desc: "Calm" }, { id: "Zephyr", gender: "M", desc: "Casual" },
+    { id: "Achernar", gender: "F", desc: "Expressive" }, { id: "Achird", gender: "M", desc: "Friendly" },
+    { id: "Algenib", gender: "M", desc: "Trustworthy" }, { id: "Algieba", gender: "F", desc: "Resonant" },
+    { id: "Autonoe", gender: "F", desc: "Spirited" }, { id: "Callirrhoe", gender: "F", desc: "Flowing" },
+    { id: "Despina", gender: "F", desc: "Precise" }, { id: "Enceladus", gender: "M", desc: "Direct" },
+    { id: "Erinome", gender: "F", desc: "Soft" }, { id: "Gacrux", gender: "M", desc: "Welcoming" },
+    { id: "Iapetus", gender: "M", desc: "Deep calm" }, { id: "Laomedeia", gender: "F", desc: "Elegant" },
+    { id: "Pulcherrima", gender: "F", desc: "Bright" }, { id: "Rasalgethi", gender: "M", desc: "Bold" },
+    { id: "Sadachbia", gender: "M", desc: "Balanced" }, { id: "Sadaltager", gender: "M", desc: "Reassuring" },
+    { id: "Schedar", gender: "F", desc: "Crisp" }, { id: "Sulafat", gender: "F", desc: "Warm" },
+    { id: "Umbriel", gender: "M", desc: "Steady" }, { id: "Vindemiatrix", gender: "F", desc: "Dynamic" },
+    { id: "Zubenelgenubi", gender: "M", desc: "Rich" },
+  ];
+
+  const { stats, calls, agents, leads, phoneNumbers, topups, loading, refresh, outboundCalls } = useDashboardData();
 
   // Load system prompt for Nilgiri bot when settings tab is active
   useEffect(() => {
@@ -157,6 +178,11 @@ export default function Dashboard() {
       setCampaignAgent("");
       setCampaignText("");
       setCampaignCloudUrl("");
+      if (campaignAudioRef.current) {
+        campaignAudioRef.current.pause();
+        campaignAudioRef.current = null;
+      }
+      setPlayingTtsVoice(null);
     } catch (err: any) {
       toast.error(err.message || "Failed to launch campaign");
     } finally {
@@ -619,15 +645,23 @@ export default function Dashboard() {
                     </div>
                     <div>
                       <h3 className="font-semibold">{agent.name}</h3>
-                      <p className="text-sm text-muted-foreground">{agent.type || "AI Support"} • {agent.isActive !== false ? 'Active' : 'Inactive'}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {agent.voice || "Kore"} Voice • {agent.is_deployed ? 'Deployed' : 'Draft'}
+                      </p>
                     </div>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  {agent.isActive !== false && (
-                    <span className="px-3 py-1 rounded-full text-xs font-semibold bg-green-500/10 text-green-600 flex items-center gap-1">
-                      <span className="h-2 w-2 rounded-full bg-green-600 animate-pulse"></span>
+                  {agent.is_deployed && (
+                    <span className="px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-green-500/10 text-green-600 flex items-center gap-1">
+                      <span className="h-1.5 w-1.5 rounded-full bg-green-600 animate-pulse"></span>
                       Active
+                    </span>
+                  )}
+                  {phoneNumbers?.find(pn => pn.primary_agent_id === agent.id) && (
+                    <span className="px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-primary/10 text-primary flex items-center gap-1">
+                      <Phone className="h-3 w-3" />
+                      Inbound Primary
                     </span>
                   )}
                   <button className="p-2 hover:bg-muted rounded-lg transition-colors">
@@ -958,28 +992,23 @@ export default function Dashboard() {
                   <div className="space-y-1.5">
                     <label className="text-sm font-medium">Google Voice</label>
                     <div className="flex gap-2">
-                      <Select value={campaignGoogleVoice} onValueChange={setCampaignGoogleVoice}>
+                      <Select 
+                        value={campaignGoogleVoice} 
+                        onValueChange={(val) => {
+                          setCampaignGoogleVoice(val);
+                          // Stop existing audio when changing dropdown
+                          if (campaignAudioRef.current) {
+                            campaignAudioRef.current.pause();
+                            campaignAudioRef.current = null;
+                          }
+                          setPlayingTtsVoice(null);
+                        }}
+                      >
                         <SelectTrigger className="flex-1">
                           <SelectValue placeholder="Select a voice..." />
                         </SelectTrigger>
                         <SelectContent className="max-h-64">
-                          {[
-                            { id: "Puck", gender: "M", desc: "Energetic" }, { id: "Kore", gender: "F", desc: "Professional" },
-                            { id: "Charon", gender: "M", desc: "Authoritative" }, { id: "Fenrir", gender: "M", desc: "Confident" },
-                            { id: "Aoede", gender: "F", desc: "Melodic" }, { id: "Leda", gender: "F", desc: "Gentle" },
-                            { id: "Orus", gender: "M", desc: "Calm" }, { id: "Zephyr", gender: "M", desc: "Casual" },
-                            { id: "Achernar", gender: "F", desc: "Expressive" }, { id: "Achird", gender: "M", desc: "Friendly" },
-                            { id: "Algenib", gender: "M", desc: "Trustworthy" }, { id: "Algieba", gender: "F", desc: "Resonant" },
-                            { id: "Autonoe", gender: "F", desc: "Spirited" }, { id: "Callirrhoe", gender: "F", desc: "Flowing" },
-                            { id: "Despina", gender: "F", desc: "Precise" }, { id: "Enceladus", gender: "M", desc: "Direct" },
-                            { id: "Erinome", gender: "F", desc: "Soft" }, { id: "Gacrux", gender: "M", desc: "Welcoming" },
-                            { id: "Iapetus", gender: "M", desc: "Deep calm" }, { id: "Laomedeia", gender: "F", desc: "Elegant" },
-                            { id: "Pulcherrima", gender: "F", desc: "Bright" }, { id: "Rasalgethi", gender: "M", desc: "Bold" },
-                            { id: "Sadachbia", gender: "M", desc: "Balanced" }, { id: "Sadaltager", gender: "M", desc: "Reassuring" },
-                            { id: "Schedar", gender: "F", desc: "Crisp" }, { id: "Sulafat", gender: "F", desc: "Warm" },
-                            { id: "Umbriel", gender: "M", desc: "Steady" }, { id: "Vindemiatrix", gender: "F", desc: "Dynamic" },
-                            { id: "Zubenelgenubi", gender: "M", desc: "Rich" },
-                          ].map(v => (
+                          {GOOGLE_CHIRP_VOICES.map(v => (
                             <SelectItem key={v.id} value={`en-IN-Chirp3-HD-${v.id}`}>
                               {v.id} ({v.gender}) — {v.desc}
                             </SelectItem>
@@ -988,14 +1017,44 @@ export default function Dashboard() {
                       </Select>
                       <button
                         type="button"
-                        title="Preview voice"
+                        title={playingTtsVoice === campaignGoogleVoice ? "Stop Preview" : "Preview Voice"}
                         onClick={() => {
                           const id = campaignGoogleVoice.split('-').pop()?.toLowerCase();
-                          if (id) new Audio(`/voices/chirp3-hd-${id}.wav`).play().catch(() => {});
+                          if (!id) return;
+                          
+                          // Toggle check
+                          if (playingTtsVoice === campaignGoogleVoice) {
+                            if (campaignAudioRef.current) {
+                              campaignAudioRef.current.pause();
+                              campaignAudioRef.current = null;
+                            }
+                            setPlayingTtsVoice(null);
+                            return;
+                          }
+
+                          // Stop previous
+                          if (campaignAudioRef.current) {
+                            campaignAudioRef.current.pause();
+                            campaignAudioRef.current = null;
+                          }
+
+                          const audio = new Audio(`/voices/chirp3-hd-${id}.wav`);
+                          campaignAudioRef.current = audio;
+                          setPlayingTtsVoice(campaignGoogleVoice);
+                          
+                          audio.play().catch(() => setPlayingTtsVoice(null));
+                          audio.onended = () => {
+                            setPlayingTtsVoice(null);
+                            campaignAudioRef.current = null;
+                          };
                         }}
                         className="px-3 py-2 border rounded-md hover:bg-muted transition-colors text-sm"
                       >
-                        ▶
+                        {playingTtsVoice === campaignGoogleVoice ? (
+                          <Square className="h-4 w-4 text-primary fill-primary" />
+                        ) : (
+                          <Play className="h-4 w-4 text-muted-foreground" />
+                        )}
                       </button>
                     </div>
                     <p className="text-xs text-muted-foreground">Google Chirp3-HD — high quality neural voices</p>
@@ -1395,9 +1454,28 @@ export default function Dashboard() {
 
       <div className="bg-card border rounded-lg p-8">
         <h3 className="text-h3 font-semibold mb-2">Nilgiri Bot Configuration</h3>
-        <p className="text-sm text-muted-foreground mb-6">Manage the core intelligence and personality of your primary AI agent</p>
+        <p className="text-sm text-muted-foreground mb-6">Manage the fallback intelligence and personality for legacy calls.</p>
         
         <div className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-1.5">
+              <label className="text-sm font-semibold flex items-center gap-2">
+                <Music className="h-4 w-4 text-primary" />
+                Fallback Voice
+              </label>
+              <Select value={stats?.company?.voice || "Kore"} onValueChange={(val) => apiClient.updateCompany(stats.company.id, { voice: val }).then(refresh)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="max-h-64">
+                   {GOOGLE_CHIRP_VOICES.map(v => (
+                    <SelectItem key={v.id} value={v.id}>{v.id} ({v.gender})</SelectItem>
+                   ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <label className="text-sm font-semibold flex items-center gap-2">
@@ -1425,6 +1503,61 @@ export default function Dashboard() {
               {isSavingPrompt ? <><Loader className="h-4 w-4 animate-spin mr-2" /> Saving...</> : "Update System Prompt"}
             </Button>
           </div>
+        </div>
+      </div>
+
+      <div className="bg-card border rounded-lg p-8">
+        <h3 className="text-h3 font-semibold mb-2">Virtual Phone Numbers (DIDs)</h3>
+        <p className="text-sm text-muted-foreground mb-6">Assign an AI agent to handle inbound calls for each of your company phone numbers.</p>
+        
+        <div className="space-y-4">
+          {phoneNumbers && phoneNumbers.length > 0 ? (
+            phoneNumbers.map((pn: any) => (
+              <div key={pn.id} className="flex items-center justify-between p-4 border rounded-xl bg-muted/20">
+                <div className="flex items-center gap-4">
+                  <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+                    <Phone className="h-5 w-5 text-primary" />
+                  </div>
+                  <div>
+                    <p className="text-base font-mono font-bold">{pn.phone_number}</p>
+                    <p className="text-xs text-muted-foreground capitalize">{pn.description || "Main Inbound Line"}</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <div className="text-right">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1">Assigned Agent</p>
+                    <Select 
+                      value={pn.primary_agent_id || "none"} 
+                      onValueChange={async (val) => {
+                        try {
+                          await apiClient.updateNumber(pn.id, { primary_agent_id: val === "none" ? null : val });
+                          toast({ title: "DID Updated", description: `Agent assigned to ${pn.phone_number}` });
+                          refresh();
+                        } catch (err: any) {
+                          toast({ title: "Update Failed", description: err.message, variant: "destructive" });
+                        }
+                      }}
+                    >
+                      <SelectTrigger className="w-48 h-9 text-sm">
+                        <SelectValue placeholder="No Agent Assigned" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">No Agent (Fallback)</SelectItem>
+                        {agents.filter(a => a.is_deployed).map((a: any) => (
+                          <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </div>
+            ))
+          ) : (
+            <div className="py-8 text-center bg-muted/10 rounded-xl border border-dashed">
+              <p className="text-sm text-muted-foreground">No active phone numbers found for your company.</p>
+            </div>
+          )}
         </div>
       </div>
 

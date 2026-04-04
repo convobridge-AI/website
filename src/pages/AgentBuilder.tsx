@@ -1,5 +1,5 @@
-import { useState, useMemo, useEffect } from "react";
-import { ChevronRight, ChevronLeft, Play, Plus, Settings, Code, Phone, CheckCircle2, ArrowRight, Eye, X, Loader2 } from "lucide-react";
+import { ChevronRight, ChevronLeft, Play, Plus, Settings, Code, Phone, CheckCircle2, ArrowRight, Eye, X, Loader2, Square } from "lucide-react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -8,6 +8,7 @@ import { LiveDemoWidget } from "@/components/LiveDemoWidget";
 import { ContextManager } from "@/components/ContextManager";
 import { apiClient } from "@/lib/apiClient";
 import { useToast } from "@/hooks/use-toast";
+import { useDashboardData } from "@/hooks/useDashboardData";
 
 interface TestCall {
   id: string;
@@ -20,6 +21,7 @@ interface TestCall {
 
 export default function AgentBuilder() {
   const { toast } = useToast();
+  const { phoneNumbers, refresh: refreshDashboard } = useDashboardData();
   const [currentStep, setCurrentStep] = useState(1); // Step 1: Template
   
   // Step 1: Template
@@ -55,6 +57,7 @@ export default function AgentBuilder() {
   
   // Step 6: Deploy
   const [isDeploying, setIsDeploying] = useState(false);
+  const [isSavingDraft, setIsSavingDraft] = useState(false);
   const [agentContext, setAgentContext] = useState<string>("");
 
   const steps = [
@@ -98,12 +101,42 @@ export default function AgentBuilder() {
     { id: "zubenelgenubi", name: "Zubenelgenubi",  gender: "Male",   description: "Rich, resonant" },
   ];
 
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
   const playVoicePreview = (voiceId: string) => {
+    // If clicking same voice that's already playing, just stop it
+    if (playingVoice === voiceId) {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current = null;
+      }
+      setPlayingVoice(null);
+      return;
+    }
+
+    // Stop any currently playing audio
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current = null;
+    }
+
     const audio = new Audio(`/voices/chirp3-hd-${voiceId}.wav`);
+    audioRef.current = audio;
     setPlayingVoice(voiceId);
-    audio.play().catch(() => {});
-    audio.onended = () => setPlayingVoice(null);
-    audio.onerror = () => setPlayingVoice(null);
+    
+    audio.play().catch((err) => {
+      console.error("Audio playback error:", err);
+      setPlayingVoice(null);
+    });
+
+    audio.onended = () => {
+      setPlayingVoice(null);
+      audioRef.current = null;
+    };
+    audio.onerror = () => {
+      setPlayingVoice(null);
+      audioRef.current = null;
+    };
   };
 
   const availableLanguages = [
@@ -202,37 +235,107 @@ export default function AgentBuilder() {
       case 1: return !!selectedTemplate;
       case 2: return !!agentName && !!selectedVoice && languages.length > 0;
       case 3: return !!systemPrompt;
-      case 4: return true; // Optional, can skip
+      case 4: return true; // Optional: context
       case 5: return testCalls.length > 0;
       case 6: return true;
       default: return false;
     }
   };
 
-  const handleDeployAgent = async () => {
-    if (!agentId) {
+  const saveAgentDraft = async (silent = false) => {
+    if (creatingAgent || isSavingDraft) return null;
+    
+    try {
+      if (!silent) setIsSavingDraft(true);
+      else setCreatingAgent(true);
+
+      const voiceName = selectedVoice.charAt(0).toUpperCase() + selectedVoice.slice(1);
+      const payload = {
+        name: agentName,
+        type: selectedTemplate.toLowerCase().replace(" agent", ""),
+        systemPrompt,
+        voice: voiceName,
+        languages,
+        personality: personality < 33 ? "formal" : personality < 67 ? "balanced" : "friendly",
+        isDeployed: false
+      };
+
+      let id = agentId;
+      if (id) {
+        // Update existing draft
+        await apiClient.updateAgent(id, payload);
+      } else {
+        // Create new draft
+        const response = await apiClient.createAgent(payload);
+        id = response.agent.id || response.agent._id;
+        setAgentId(id);
+      }
+
+      if (!silent) {
+        toast({
+          title: "Draft saved",
+          description: `"${agentName}" has been saved successfully.`,
+        });
+      }
+      return id;
+    } catch (error: any) {
       toast({
-        title: "Error",
-        description: "Agent ID not found. Please complete steps 1–4 first.",
+        title: "Error saving draft",
+        description: error.message || "Failed to save agent. Please try again.",
         variant: "destructive",
       });
-      return;
+      return null;
+    } finally {
+      setIsSavingDraft(false);
+      setCreatingAgent(false);
+    }
+  };
+
+  const handleDeployAgent = async () => {
+    let currentId = agentId;
+    
+    // If no agentId yet (e.g. skipped to deploy), create it now
+    if (!currentId) {
+       currentId = await saveAgentDraft(true);
+       if (!currentId) return; // Error toast already shown in saveAgentDraft
     }
 
     try {
       setIsDeploying(true);
 
-      // Mark agent as deployed in Supabase (is_deployed = true)
-      await apiClient.updateAgent(agentId, { is_deployed: true, is_active: true });
+      // Final update of all fields before marking as deployed
+      const voiceName = selectedVoice.charAt(0).toUpperCase() + selectedVoice.slice(1);
+      await apiClient.updateAgent(currentId, { 
+        name: agentName,
+        voice: voiceName,
+        systemPrompt,
+        is_deployed: true, 
+        is_active: true 
+      });
+
+      // Plan Step 457: Automatically set as primary if only one DID exists
+      let didMessage = "Your agent is now live. Go to the Dashboard → Phone Numbers to set it as the primary inbound agent.";
+      
+      if (phoneNumbers && phoneNumbers.length === 1) {
+        try {
+          const did = phoneNumbers[0];
+          await apiClient.updateNumber(did.id, { primary_agent_id: currentId });
+          didMessage = `Agent successfully assigned as the primary handler for ${did.phone_number}.`;
+          refreshDashboard(); // Refresh local cache
+        } catch (didErr) {
+          console.error("Failed to auto-assign DID:", didErr);
+          // Don't fail the whole deploy if just DID assignment fails, but tell the user
+        }
+      }
 
       toast({
         title: "✅ Agent deployed!",
-        description: `"${agentName}" is now active. Go to the Dashboard → Phone Numbers to set it as the primary inbound agent on a DID.`,
+        description: didMessage,
       });
 
       setTimeout(() => {
         window.location.href = "/dashboard";
-      }, 2500);
+      }, 3000);
     } catch (error: any) {
       toast({
         title: "Error deploying agent",
@@ -262,36 +365,10 @@ export default function AgentBuilder() {
 
   // Create a draft agent when entering Step 4 if not already created
   useEffect(() => {
-    const createDraftAgent = async () => {
-      if (currentStep === 4 && !agentId && !creatingAgent) {
-        try {
-          setCreatingAgent(true);
-          // Voice is stored as title-cased Gemini name (e.g. "Puck") — backend loads it directly
-          const voiceName = selectedVoice.charAt(0).toUpperCase() + selectedVoice.slice(1);
-          const response = await apiClient.createAgent({
-            name: `${agentName} (Draft)`,
-            type: selectedTemplate.toLowerCase().replace(" agent", ""),
-            systemPrompt,
-            voice: voiceName,
-            languages,
-            personality: personality < 33 ? "formal" : personality < 67 ? "balanced" : "friendly",
-            isDeployed: false
-          });
-          // Supabase returns UUID in .id (not ._id)
-          setAgentId(response.agent.id || response.agent._id);
-        } catch (error: any) {
-          toast({
-            title: "Error creating draft agent",
-            description: error.message || "Failed to create draft agent. Please check your connection.",
-            variant: "destructive",
-          });
-        } finally {
-          setCreatingAgent(false);
-        }
-      }
-    };
-    createDraftAgent();
-  }, [currentStep, agentId, creatingAgent, agentName, selectedTemplate, systemPrompt, selectedVoice, languages, personality, toast]);
+    if (currentStep === 4 && !agentId && !creatingAgent) {
+      saveAgentDraft(true);
+    }
+  }, [currentStep, agentId, creatingAgent]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -300,7 +377,14 @@ export default function AgentBuilder() {
         <div className="max-w-7xl mx-auto px-6 py-6">
           <div className="flex items-center justify-between mb-6">
             <h1 className="text-h2">Create New Agent</h1>
-            <Button variant="outline" size="sm">Save Draft</Button>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => saveAgentDraft(false)}
+              disabled={isSavingDraft || creatingAgent}
+            >
+              {isSavingDraft ? <><Loader2 className="h-4 w-4 animate-spin mr-2" /> Saving...</> : "Save Draft"}
+            </Button>
           </div>
 
           {/* Progress Bar */}
@@ -414,13 +498,22 @@ export default function AgentBuilder() {
                   <p className="text-caption text-muted-foreground">29 Google Chirp3-HD voices — click ▶ to preview</p>
                   <div className="grid grid-cols-2 gap-2 max-h-72 overflow-y-auto pr-1">
                     {voices.map((voice) => (
-                      <button
+                      <div
                         key={voice.id}
-                        onClick={() => setSelectedVoice(voice.id)}
-                        className={`p-3 border rounded-lg text-left transition-all flex items-start justify-between gap-2 ${
+                        onClick={() => {
+                          setSelectedVoice(voice.id);
+                          if (playingVoice && playingVoice !== voice.id) {
+                            if (audioRef.current) {
+                                audioRef.current.pause();
+                                audioRef.current = null;
+                            }
+                            setPlayingVoice(null);
+                          }
+                        }}
+                        className={`p-3 border rounded-lg text-left transition-all flex items-start justify-between gap-2 cursor-pointer ${
                           selectedVoice === voice.id
-                            ? "border-primary bg-primary/5"
-                            : "border-border hover:border-primary/50"
+                            ? "border-primary bg-primary/5 shadow-sm"
+                            : "border-border hover:border-primary/40 hover:bg-muted/30"
                         }`}
                       >
                         <div className="min-w-0 flex-1">
@@ -436,16 +529,19 @@ export default function AgentBuilder() {
                         </div>
                         <button
                           type="button"
-                          onClick={(e) => { e.stopPropagation(); playVoicePreview(voice.id); }}
+                          onClick={(e) => { 
+                            e.stopPropagation(); 
+                            playVoicePreview(voice.id); 
+                          }}
                           className="flex-shrink-0 p-1.5 rounded-md hover:bg-muted transition-colors"
-                          title="Preview voice"
+                          title={playingVoice === voice.id ? "Stop voice" : "Preview voice"}
                         >
                           {playingVoice === voice.id
-                            ? <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />
-                            : <Play className="h-3.5 w-3.5 text-muted-foreground hover:text-primary" />
+                            ? <Square className="h-4 w-4 text-primary fill-primary" />
+                            : <Play className="h-4 w-4 text-muted-foreground hover:text-primary" />
                           }
                         </button>
-                      </button>
+                      </div>
                     ))}
                   </div>
                 </div>

@@ -10,6 +10,7 @@ export const useDashboardData = () => {
   const [calls, setCalls] = useState<any[]>([]);
   const [agents, setAgents] = useState<any[]>([]);
   const [leads, setLeads] = useState<any[]>([]);
+  const [phoneNumbers, setPhoneNumbers] = useState<any[]>([]);
   const [topups, setTopups] = useState<any[]>([]);
   const [outboundCalls, setOutboundCalls] = useState<any[]>([]);
 
@@ -20,12 +21,14 @@ export const useDashboardData = () => {
       setLoading(true);
       
       // Use RPC functions instead of direct queries to bypass RLS
-      const [callsRes, leadsRes, companyRes, topupsRes, outboundRes] = await Promise.all([
+      const [callsRes, leadsRes, companyRes, topupsRes, outboundRes, agentsRes, phoneNumbersRes] = await Promise.all([
         supabase.rpc('get_user_calls', { user_id_param: user.id }),
         supabase.rpc('get_user_leads', { user_id_param: user.id }),
         supabase.rpc('get_user_company', { user_id_param: user.id }),
         supabase.rpc('get_user_topups', { user_id_param: user.id }),
-        supabase.rpc('get_user_outbound_calls', { user_id_param: user.id })
+        supabase.rpc('get_user_outbound_calls', { user_id_param: user.id }),
+        supabase.rpc('get_user_agents', { user_id_param: user.id }),
+        supabase.rpc('get_user_phone_numbers', { user_id_param: user.id })
       ]);
 
       if (callsRes.error) throw callsRes.error;
@@ -57,11 +60,8 @@ export const useDashboardData = () => {
       
       setCalls(callsData);
       setLeads(leadsData);
-      setAgents([{ 
-        id: companyData?.id, 
-        name: companyData?.name || 'Primary Agent', 
-        isActive: companyData?.active 
-      }]);
+      setAgents(agentsRes.data || []);
+      setPhoneNumbers(phoneNumbersRes.data || []);
       setTopups(topupsData);
       setOutboundCalls(outboundData);
 
@@ -133,6 +133,7 @@ export const useDashboardData = () => {
     calls,
     agents,
     leads,
+    phoneNumbers,
     refresh: fetchData,
     topups,
     outboundCalls,
