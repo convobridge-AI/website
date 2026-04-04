@@ -58,6 +58,7 @@ const App = () => {
               <Route path="/admin" element={<AdminRoute><Admin /></AdminRoute>} />
               <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
               <Route path="/dashboard/agents/new" element={<ProtectedRoute><AgentBuilder /></ProtectedRoute>} />
+              <Route path="/dashboard/agents/edit/:id" element={<ProtectedRoute><AgentBuilder /></ProtectedRoute>} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </AuthProvider>

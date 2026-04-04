@@ -9,7 +9,7 @@ import { Navigate } from 'react-router-dom';
 import {
   Building2, CreditCard, TrendingUp, Users,
   Plus, Loader2, Search, CheckCircle2, DollarSign,
-  Phone, Hash
+  Phone, Hash, Bot, Trash2
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import {
@@ -41,6 +41,8 @@ export default function Admin() {
   const [newLabel, setNewLabel] = useState('');
   const [newNumberCompany, setNewNumberCompany] = useState('');
   const [addingNumber, setAddingNumber] = useState(false);
+  const [allAgents, setAllAgents] = useState<any[]>([]);
+  const [agentsLoading, setAgentsLoading] = useState(false);
 
   const loadData = async () => {
     setLoading(true);
@@ -67,7 +69,37 @@ export default function Admin() {
     }
   };
 
-  useEffect(() => { loadData(); loadDids(); }, []);
+  const loadAgents = async () => {
+    setAgentsLoading(true);
+    try {
+      // Get agents and join with company to show owner name
+      const { data, error } = await supabase
+        .from('agents')
+        .select('*, companies(name)')
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      setAllAgents(data || []);
+    } catch (err: any) {
+      toast({ title: 'Error loading global agents', description: err.message, variant: 'destructive' });
+    } finally {
+      setAgentsLoading(false);
+    }
+  };
+
+  useEffect(() => { loadData(); loadDids(); loadAgents(); }, []);
+
+  const handleAgentDelete = async (id: string, name: string) => {
+    if (!window.confirm(`Are you sure you want to delete "${name}"? This action cannot be undone.`)) return;
+    
+    try {
+      await apiClient.deleteAgent(id);
+      toast({ title: 'Agent Deleted', description: `Successfully removed "${name}"` });
+      loadAgents();
+    } catch (err: any) {
+      toast({ title: 'Delete failed', description: err.message, variant: 'destructive' });
+    }
+  };
 
   const handleTopup = async () => {
     if (!selectedCompany || !topupAmount) return;
@@ -162,7 +194,7 @@ export default function Admin() {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         {[
           { label: 'Total Tenants', value: companies.length, icon: Building2, color: 'text-blue-600' },
-          { label: 'Active Calls', value: '4', icon: TrendingUp, color: 'text-green-600' },
+          { label: 'Total AI Agents', value: allAgents.length, icon: Bot, color: 'text-indigo-600' },
           { label: 'Platform Revenue', value: `$${companies.reduce((acc, c) => acc + parseFloat(c.credit_balance || 0), 0).toFixed(2)}`, icon: DollarSign, color: 'text-purple-600' },
           { label: 'Total Leads', value: companies.reduce((acc, c) => acc + (c.leads_count?.[0]?.count || 0), 0), icon: Users, color: 'text-orange-600' },
         ].map((stat, i) => (
@@ -331,6 +363,81 @@ export default function Admin() {
           </div>
         </CardContent>
       </Card>
+
+      {/* ── Agents Management ───────────────────────────────────── */}
+      <Card className="stripe-card overflow-hidden">
+        <CardHeader className="border-b bg-gray-50/50 p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2"><Bot className="h-5 w-5 text-primary" /> Global Agents Manager</CardTitle>
+              <CardDescription>View, edit, and moderate all AI agents active on the platform.</CardDescription>
+            </div>
+            <p className="text-sm font-medium text-muted-foreground">{allAgents.length} Agents Found</p>
+          </div>
+        </CardHeader>
+        <CardContent className="p-0">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-gray-50/50 text-caption font-semibold text-muted-foreground border-b border-gray-100">
+                  <th className="px-6 py-4">Agent Name</th>
+                  <th className="px-6 py-4">Organization</th>
+                  <th className="px-6 py-4">Voice</th>
+                  <th className="px-6 py-4">Status</th>
+                  <th className="px-6 py-4 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {agentsLoading ? (
+                  <tr><td colSpan={5} className="px-6 py-8 text-center"><Loader2 className="h-5 w-5 animate-spin mx-auto" /></td></tr>
+                ) : allAgents.map((agent) => (
+                  <tr key={agent.id} className="hover:bg-gray-50/50 transition-colors">
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-2">
+                        <div className="h-2 w-2 rounded-full bg-primary animate-pulse" />
+                        <span className="font-medium text-body">{agent.name}</span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className="text-sm text-muted-foreground">{(agent.companies as any)?.name || 'Unknown'}</span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className="text-sm font-mono bg-muted/50 px-2 py-0.5 rounded">{agent.voice}</span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex gap-2">
+                        {agent.is_deployed && <span className="px-2 py-0.5 rounded-full bg-success/10 text-success text-[10px] uppercase font-bold">Deployed</span>}
+                        {agent.is_active && <span className="px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 text-[10px] uppercase font-bold">In-Use</span>}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <div className="flex justify-end gap-2">
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="text-primary h-8"
+                          onClick={() => window.location.href = `/dashboard/agents/edit/${agent.id}`}
+                        >
+                          Edit
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="text-destructive h-8"
+                          onClick={() => handleAgentDelete(agent.id, agent.name)}
+                        >
+                          Delete
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
+
 
       {/* ── DID Pool Management ──────────────────────────────────────── */}
       <Card className="stripe-card overflow-hidden">

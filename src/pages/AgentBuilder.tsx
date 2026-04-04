@@ -1,5 +1,6 @@
 import { ChevronRight, ChevronLeft, Play, Plus, Settings, Code, Phone, CheckCircle2, ArrowRight, Eye, X, Loader2, Square } from "lucide-react";
 import { useState, useMemo, useEffect, useRef } from "react";
+import { useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -20,6 +21,7 @@ interface TestCall {
 }
 
 export default function AgentBuilder() {
+  const { id: urlAgentId } = useParams();
   const { toast } = useToast();
   const { phoneNumbers, refresh: refreshDashboard } = useDashboardData();
   const [currentStep, setCurrentStep] = useState(1); // Step 1: Template
@@ -48,6 +50,39 @@ export default function AgentBuilder() {
   });
   const [agentId, setAgentId] = useState<string | null>(null);
   const [creatingAgent, setCreatingAgent] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+
+  // Load existing agent if edit mode
+  useEffect(() => {
+    const loadAgent = async () => {
+      if (!urlAgentId) return;
+      
+      try {
+        setIsLoading(true);
+        const { agent } = await apiClient.getAgent(urlAgentId);
+        if (agent) {
+          setAgentId(agent.id);
+          setAgentName(agent.name);
+          setSelectedVoice(agent.voice?.toLowerCase() || "puck");
+          setLanguages(agent.language?.split(', ').filter(Boolean) || ["English"]);
+          setSystemPrompt(agent.master_prompt || "");
+          
+          const personalityMap: {[key: string]: number} = { "formal": 20, "balanced": 50, "friendly": 80 };
+          setPersonality(personalityMap[agent.personality] || 50);
+          
+          // Jump to step 2 if we are loading an existing agent
+          setCurrentStep(2);
+        }
+      } catch (err) {
+        console.error("Error loading agent:", err);
+        toast({ title: "Error loading agent", variant: "destructive" });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadAgent();
+  }, [urlAgentId]);
   
   // Step 5: Test Call
   const [testScenario, setTestScenario] = useState("Interested Prospect");
@@ -236,7 +271,7 @@ export default function AgentBuilder() {
       case 2: return !!agentName && !!selectedVoice && languages.length > 0;
       case 3: return !!systemPrompt;
       case 4: return true; // Optional: context
-      case 5: return testCalls.length > 0;
+      case 5: return testCalls.length > 0 || !!agentId; // Allow skipping test if agent already exists
       case 6: return true;
       default: return false;
     }
@@ -252,7 +287,6 @@ export default function AgentBuilder() {
       const voiceName = selectedVoice.charAt(0).toUpperCase() + selectedVoice.slice(1);
       const payload = {
         name: agentName,
-        type: selectedTemplate.toLowerCase().replace(" agent", ""),
         systemPrompt,
         voice: voiceName,
         languages,
@@ -372,6 +406,14 @@ export default function AgentBuilder() {
 
   return (
     <div className="min-h-screen bg-background">
+      {isLoading && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
+          <div className="flex flex-col items-center gap-4">
+            <Loader2 className="h-12 w-12 animate-spin text-primary" />
+            <p className="text-lg font-medium">Loading agent configuration...</p>
+          </div>
+        </div>
+      )}
       {/* Header */}
       <div className="sticky top-0 z-40 bg-card border-b">
         <div className="max-w-7xl mx-auto px-6 py-6">

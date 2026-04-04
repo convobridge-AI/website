@@ -144,7 +144,7 @@ class APIClient {
       language: Array.isArray(agentData.languages) ? agentData.languages.join(', ') : agentData.languages,
       personality: agentData.personality,
       master_prompt: agentData.systemPrompt || '',
-      is_active: agentData.isDeployed !== false
+      is_active: true // Always active for testing, is_deployed tracks production status
     };
 
     const { data, error } = await supabase
@@ -182,9 +182,25 @@ class APIClient {
   }
 
   async updateAgent(id: string, agentData: any) {
+    // Map frontend names to Supabase schema if they exist in the input
+    const payload: any = {};
+    if (agentData.name !== undefined) payload.name = agentData.name;
+    if (agentData.voice !== undefined) payload.voice = agentData.voice;
+    if (agentData.systemPrompt !== undefined) payload.master_prompt = agentData.systemPrompt;
+    if (agentData.languages !== undefined) {
+      payload.language = Array.isArray(agentData.languages) ? agentData.languages.join(', ') : agentData.languages;
+    }
+    if (agentData.personality !== undefined) payload.personality = agentData.personality;
+    if (agentData.is_active !== undefined) payload.is_active = agentData.is_active;
+    if (agentData.is_deployed !== undefined) payload.is_deployed = agentData.is_deployed;
+    
+    // Handle both snake_case and camelCase for backward compatibility during transition
+    if (agentData.isDeployed !== undefined) payload.is_deployed = agentData.isDeployed;
+    if (agentData.master_prompt !== undefined) payload.master_prompt = agentData.master_prompt;
+
     const { data, error } = await supabase
       .from('agents')
-      .update(agentData)
+      .update(payload)
       .eq('id', id)
       .select()
       .single();

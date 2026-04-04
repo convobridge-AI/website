@@ -1,9 +1,10 @@
 import React, { useState, useMemo, useEffect, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Home, PhoneIncoming, Bot, Users, Settings, LogOut, Menu, X, Phone,
   BarChart3, TrendingUp, Clock, Search, Plus, MoreVertical, ArrowUpRight,
   ArrowDownRight, Eye, Download, ChevronLeft, ChevronRight,
-  AlertCircle, Zap, CheckCircle2, Loader, PlayCircle, Play, Megaphone, Square
+  AlertCircle, Zap, CheckCircle2, Loader, PlayCircle, Play, Megaphone, Square, Trash2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PremiumAudioPlayer } from "@/components/PremiumAudioPlayer";
@@ -30,6 +31,7 @@ import { useDashboardData } from "@/hooks/useDashboardData";
 import { useAuth } from "@/contexts/AuthContext";
 
 export default function Dashboard() {
+  const navigate = useNavigate();
   const { logout } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [activeTab, setActiveTab] = useState("home");
@@ -187,6 +189,19 @@ export default function Dashboard() {
       toast.error(err.message || "Failed to launch campaign");
     } finally {
       setIsLaunchingCampaign(false);
+    }
+  };
+
+  const handleAgentDelete = async (id: string, name: string) => {
+    if (!window.confirm(`Are you sure you want to delete "${name}"? This action cannot be undone.`)) return;
+    
+    try {
+      await apiClient.deleteAgent(id);
+      toast.success(`Agent "${name}" deleted successfully`);
+      refresh(); // Refresh data
+    } catch (err: any) {
+      console.error("Error deleting agent:", err);
+      toast.error(err.message || "Failed to delete agent");
     }
   };
 
@@ -609,7 +624,7 @@ export default function Dashboard() {
                   key={template.name}
                   className="p-4 border rounded-lg hover:border-primary hover:bg-primary/5 transition-all text-center"
                   onClick={() => {
-                    window.location.href = "/dashboard/agents/new";
+                    navigate("/dashboard/agents/new");
                   }}
                 >
                   <div className="text-2xl mb-2">{template.icon}</div>
@@ -664,9 +679,6 @@ export default function Dashboard() {
                       Inbound Primary
                     </span>
                   )}
-                  <button className="p-2 hover:bg-muted rounded-lg transition-colors">
-                    <MoreVertical className="h-4 w-4 text-muted-foreground" />
-                  </button>
                 </div>
               </div>
 
@@ -695,6 +707,33 @@ export default function Dashboard() {
                   <p className="text-sm text-foreground line-clamp-2">{agent.systemPrompt || agent.prompt}</p>
                 </div>
               )}
+
+              <div className="mt-6 flex items-center justify-end gap-3 pt-4 border-t">
+                <Button 
+                  variant="outline" 
+                   size="sm"
+                  className="h-9 px-4 border-primary/20 text-primary hover:bg-primary/5 hover:border-primary/40 transition-colors"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    navigate(`/dashboard/agents/edit/${agent.id || agent._id}`);
+                  }}
+                >
+                  <Settings className="mr-2 h-4 w-4" />
+                  Modify Agent
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  className="h-9 px-4 border-destructive/20 text-destructive hover:bg-destructive/5 hover:border-destructive/40 transition-colors"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleAgentDelete(agent.id || agent._id, agent.name);
+                  }}
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Delete
+                </Button>
+              </div>
             </div>
           ))}
         </div>
