@@ -41,6 +41,48 @@ export const useDashboardData = () => {
       const topupsData = topupsRes.data || [];
       const outboundData = outboundRes.data || [];
       
+      // Calculate trends
+      const now = new Date();
+      const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+      const sixtyDaysAgo = new Date(now.getTime() - 60 * 24 * 60 * 60 * 1000);
+
+      const currCalls = callsData.filter(c => new Date(c.started_at) >= thirtyDaysAgo);
+      const prevCalls = callsData.filter(c => {
+         const d = new Date(c.started_at);
+         return d >= sixtyDaysAgo && d < thirtyDaysAgo;
+      });
+      const currLeads = leadsData.filter(l => new Date(l.created_at) >= thirtyDaysAgo);
+      const prevLeads = leadsData.filter(l => {
+         const d = new Date(l.created_at);
+         return d >= sixtyDaysAgo && d < thirtyDaysAgo;
+      });
+
+      const calcTrend = (curr: number, prev: number) => {
+        if (prev === 0 && curr === 0) return { percentage: "+0%", isUp: true, previous: "0", currentValue: "0" };
+        if (prev === 0) return { percentage: "+100%", isUp: true, previous: "0", currentValue: curr.toString() };
+        const percent = Math.round(((curr - prev) / prev) * 100);
+        return { percentage: `${percent > 0 ? '+' : ''}${percent}%`, isUp: percent >= 0, previous: prev.toString(), currentValue: curr.toString() };
+      };
+
+      const currSuccess = currCalls.filter(c => c.status === 'completed' || c.duration_sec > 10).length;
+      const prevSuccess = prevCalls.filter(c => c.status === 'completed' || c.duration_sec > 10).length;
+      const currSuccessRate = currCalls.length > 0 ? currSuccess / currCalls.length : 1;
+      const prevSuccessRate = prevCalls.length > 0 ? prevSuccess / prevCalls.length : 1;
+
+      const calcTrendPercent = (curr: number, prev: number) => {
+        const diff = (curr - prev) * 100;
+        return { percentage: `${diff > 0 ? '+' : ''}${diff.toFixed(1)}%`, isUp: diff >= 0, previous: `${(prev * 100).toFixed(1)}%`, currentValue: `${(curr * 100).toFixed(1)}%` };
+      };
+
+      const activeAgentsCount = agentsRes.data?.filter((a: any) => a.is_deployed || a.isActive)?.length || 0;
+
+      const trends = {
+        calls: calcTrend(currCalls.length, prevCalls.length),
+        leads: calcTrend(currLeads.length, prevLeads.length),
+        successRate: calcTrendPercent(currSuccessRate, prevSuccessRate),
+        agents: calcTrend(activeAgentsCount, activeAgentsCount) // Usually static or hard to trace previous state
+      };
+
       // Calculate analytics
       const totalCalls = callsData.length;
       const totalDuration = callsData.reduce((acc, call) => acc + (call.duration_sec || 0), 0);
@@ -55,7 +97,8 @@ export const useDashboardData = () => {
         credits: companyData?.credit_balance || 0,
         outbound_balance: companyData?.outbound_balance || 0,
         successRate: totalCalls > 0 ? successfulCalls / totalCalls : 1,
-        company: companyData
+        company: companyData,
+        trends
       });
       
       setCalls(callsData);

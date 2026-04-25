@@ -279,40 +279,40 @@ export default function Dashboard() {
   // Format real metrics from MongoDB stats
   const metrics = stats ? [
     {
-      label: "Total Calls",
-      value: stats.totalCalls?.toLocaleString() || "0",
-      trend: "+0%",
-      trendUp: true,
+      label: "Total Calls (30d)",
+      value: stats.trends?.calls?.currentValue ?? stats.totalCalls?.toLocaleString() ?? "0",
+      trend: stats.trends?.calls?.percentage || "+0%",
+      trendUp: stats.trends?.calls?.isUp ?? true,
       icon: Phone,
       color: "bg-blue-500/10 text-blue-600",
-      previous: "—"
+      previous: stats.trends?.calls?.previous || "—"
     },
     {
       label: "Active Agents",
-      value: agents?.filter(a => a.isActive).length || "0",
-      trend: "+0",
-      trendUp: true,
+      value: agents?.filter(a => a.is_deployed || a.isActive)?.length || "0",
+      trend: stats.trends?.agents?.percentage || "+0%",
+      trendUp: stats.trends?.agents?.isUp ?? true,
       icon: Bot,
       color: "bg-purple-500/10 text-purple-600",
-      previous: "—"
+      previous: stats.trends?.agents?.previous || "—"
     },
     {
-      label: "New Leads",
-      value: leads?.length || "0",
-      trend: "+0%",
-      trendUp: true,
+      label: "New Leads (30d)",
+      value: stats.trends?.leads?.currentValue ?? leads?.length ?? "0",
+      trend: stats.trends?.leads?.percentage || "+0%",
+      trendUp: stats.trends?.leads?.isUp ?? true,
       icon: TrendingUp,
       color: "bg-green-500/10 text-green-600",
-      previous: "—"
+      previous: stats.trends?.leads?.previous || "—"
     },
     {
-      label: "Success Rate",
-      value: stats.successRate ? `${(stats.successRate * 100).toFixed(1)}%` : "0%",
-      trend: "+0%",
-      trendUp: true,
+      label: "Success Rate (30d)",
+      value: stats.trends?.successRate?.currentValue ?? (stats.successRate ? `${(stats.successRate * 100).toFixed(1)}%` : "0%"),
+      trend: stats.trends?.successRate?.percentage || "+0%",
+      trendUp: stats.trends?.successRate?.isUp ?? true,
       icon: CheckCircle2,
       color: "bg-orange-500/10 text-orange-600",
-      previous: "—"
+      previous: stats.trends?.successRate?.previous || "—"
     }
   ] : [];
 
@@ -855,10 +855,11 @@ export default function Dashboard() {
                           href={call.recording_url}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-green-600 hover:text-green-700 transition-colors"
-                          title="Play recording"
+                          download={`recording_${call.caller_number || call.id}.wav`}
+                          className="text-primary hover:text-primary/80 transition-colors"
+                          title="Download recording"
                         >
-                          <Play className="h-4 w-4" />
+                          <Download className="h-4 w-4" />
                         </a>
                       )}
                       <button
@@ -1875,35 +1876,35 @@ export default function Dashboard() {
             <div className="space-y-6">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <p className="text-sm text-muted-foreground mb-1">Agent</p>
-                  <p className="font-semibold">{selectedCall.agentId?.name || 'Unknown'}</p>
+                  <p className="text-sm text-muted-foreground mb-1">Agent ID</p>
+                  <p className="font-semibold">{selectedCall.agent_id || 'Unknown'}</p>
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground mb-1">Phone Number</p>
-                  <p className="font-mono text-sm">{selectedCall.phoneNumber || '—'}</p>
+                  <p className="font-mono text-sm">{selectedCall.caller_number || selectedCall.metadata?.dialed_number || '—'}</p>
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground mb-1">Duration</p>
-                  <p className="font-semibold">{formatDuration(selectedCall.duration)}</p>
+                  <p className="font-semibold">{formatDuration(selectedCall.duration_sec)}</p>
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground mb-1">Status</p>
                   <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${
-                    selectedCall.status === 'completed' ? 'bg-green-500/10 text-green-600' :
+                    selectedCall.status === 'completed' || selectedCall.duration_sec > 10 ? 'bg-green-500/10 text-green-600' :
                     selectedCall.status === 'missed' ? 'bg-red-500/10 text-red-600' :
                     selectedCall.status === 'failed' ? 'bg-red-500/10 text-red-600' :
                     'bg-yellow-500/10 text-yellow-600'
                   }`}>
-                    {selectedCall.status}
+                    {selectedCall.status || 'unknown'}
                   </span>
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground mb-1">Outcome</p>
-                  <p className="font-semibold">{selectedCall.outcome || '—'}</p>
+                  <p className="text-sm text-muted-foreground mb-1">Cost</p>
+                  <p className="font-semibold">{selectedCall.cost !== null ? `$${Number(selectedCall.cost).toFixed(3)}` : '—'}</p>
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground mb-1">Call Time</p>
-                  <p className="text-sm">{selectedCall.startedAt ? new Date(selectedCall.startedAt).toLocaleString() : '—'}</p>
+                  <p className="text-sm">{selectedCall.started_at ? new Date(selectedCall.started_at).toLocaleString() : '—'}</p>
                 </div>
               </div>
 
@@ -1920,23 +1921,14 @@ export default function Dashboard() {
                 </div>
               )}
 
-              {selectedCall.transcript_user && (
+              {selectedCall.transcript && (
                 <div className="space-y-3">
                   <h4 className="font-semibold text-sm flex items-center gap-2">
                     <CheckCircle2 className="h-4 w-4 text-green-500" />
                     Live Transcript
                   </h4>
-                  <div className="bg-muted/30 rounded-xl p-4 max-h-48 overflow-y-auto space-y-3 border border-border/50">
-                    <div className="space-y-1">
-                      <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">User</p>
-                      <p className="text-sm italic text-foreground/80">{selectedCall.transcript_user}</p>
-                    </div>
-                    {selectedCall.transcript_ai && (
-                      <div className="space-y-1">
-                        <p className="text-[10px] font-bold uppercase tracking-widest text-primary">AI Agent</p>
-                        <p className="text-sm text-foreground">{selectedCall.transcript_ai}</p>
-                      </div>
-                    )}
+                  <div className="bg-muted/30 rounded-xl p-4 max-h-48 overflow-y-auto space-y-3 border border-border/50 text-sm whitespace-pre-wrap font-mono">
+                    {selectedCall.transcript}
                   </div>
                 </div>
               )}
