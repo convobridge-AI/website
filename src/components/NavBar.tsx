@@ -33,9 +33,7 @@ export default function NavBar() {
         </div>
 
         <div className="hidden md:flex items-center gap-3">
-          <NavLink to="/login">
-            <span className="text-sm text-muted-foreground hover:text-foreground transition-colors cursor-pointer">Login</span>
-          </NavLink>
+
           <NavLink to="/dashboard">
             <Button size="sm" className="rounded-xl px-5 bg-primary text-primary-foreground hover:brightness-110 shadow-[0_0_20px_-5px_hsla(217,91%,50%,0.3)]">
               Get Started
@@ -71,9 +69,7 @@ export default function NavBar() {
               </NavLink>
             ))}
             <div className="pt-4 mt-2 border-t border-border flex flex-col gap-2">
-              <NavLink to="/login" className="w-full" onClick={() => setOpen(false)}>
-                <Button variant="ghost" size="sm" className="w-full justify-start">Login</Button>
-              </NavLink>
+
               <NavLink to="/dashboard" className="w-full" onClick={() => setOpen(false)}>
                 <Button size="sm" className="w-full">Get Started</Button>
               </NavLink>

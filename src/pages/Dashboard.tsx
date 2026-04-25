@@ -818,8 +818,16 @@ export default function Dashboard() {
                     <td className="px-6 py-4 text-sm text-muted-foreground">
                       {formatTime(call.started_at)}
                     </td>
-                    <td className="px-6 py-4 text-sm font-mono font-semibold">
-                      {call.caller_number || '—'}
+                    <td className="px-6 py-4">
+                      <div className="flex flex-col gap-1">
+                        <span className="text-sm font-mono font-semibold">{call.caller_number || '—'}</span>
+                        {call.metadata?.callback_requested && (
+                          <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold tracking-wider bg-orange-500/10 text-orange-600 w-fit" title="User requested a callback">
+                            <Phone className="h-2.5 w-2.5 mr-1" />
+                            Callback Req
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td className="px-6 py-4 text-sm font-mono text-muted-foreground">
                       {call.metadata?.dialed_number || call.metadata?.call_tag || '—'}
