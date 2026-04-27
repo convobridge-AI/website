@@ -1,15 +1,15 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, useMotionValue, useTransform } from "framer-motion";
 
 // ─────────────────────────────────────────────────────────────
 //  CONVOBRIDGE — PITCH DECK
-//  Design Philosophy: Large Typography. Intentional Motion.
-//  No clutter. Pure clarity.
+//  Design Philosophy: Clean. Fast. Honest.
+//  Typography is the brand. Whitespace is the luxury.
 // ─────────────────────────────────────────────────────────────
 
-const TOTAL_SLIDES = 11; // Increased for the new platform slide
+const TOTAL_SLIDES = 10;
 
-const ease: any = [0.22, 1, 0.36, 1];
+const ease = [0.22, 1, 0.36, 1];
 const springConfig = { type: "spring" as const, stiffness: 100, damping: 30 };
 
 // Animated counter hook
@@ -125,84 +125,69 @@ export default function PitchDeck() {
   const slideVariants = {
     enter: (d: number) => ({
       opacity: 0,
-      y: d > 0 ? "15%" : "-15%",
-      scale: 0.95,
-      filter: "blur(12px)",
+      y: d > 0 ? "8%" : "-8%",
+      scale: 0.97,
+      filter: "blur(6px)",
     }),
     center: {
       opacity: 1,
       y: 0,
       scale: 1,
       filter: "blur(0px)",
-      transition: { duration: 1.2, ease },
+      transition: { duration: 1, ease },
     },
     exit: (d: number) => ({
       opacity: 0,
-      y: d < 0 ? "15%" : "-15%",
-      scale: 0.95,
-      filter: "blur(12px)",
-      transition: { duration: 0.8, ease },
+      y: d < 0 ? "8%" : "-8%",
+      scale: 0.97,
+      filter: "blur(6px)",
+      transition: { duration: 0.7, ease },
     }),
   };
 
-  const isLightSlide = active !== 10; // All slides light except closing slide
+  const isLightSlide = active !== 9; // All slides light except closing slide
 
   return (
     <div className={`fixed inset-0 overflow-hidden transition-colors duration-1000 ${isLightSlide ? 'bg-[#FAFAFA]' : 'bg-[#1a3fd8]'}`}>
-      <div className="absolute inset-0 pointer-events-none opacity-[0.02] mix-blend-multiply bg-[url('https://grainy-gradients.vercel.app/noise.svg')]" />
+      {/* Subtle Grid Pattern on light slides */}
       {isLightSlide && (
         <div
           className="absolute inset-0 pointer-events-none opacity-[0.03]"
           style={{
-            backgroundImage: "linear-gradient(rgba(0,0,0,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(0,0,0,0.1) 1px, transparent 1px)",
-            backgroundSize: '100px 100px'
+            backgroundImage: `linear-gradient(rgba(0,0,0,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(0,0,0,0.1) 1px, transparent 1px)`,
+            backgroundSize: '80px 80px'
           }}
         />
       )}
 
-      <div className="fixed right-8 top-1/2 -translate-y-1/2 z-50 flex flex-col items-center gap-[8px]">
+      {/* Navigation dots */}
+      <div className="fixed right-6 top-1/2 -translate-y-1/2 z-50 flex flex-col items-center gap-[6px]">
         {Array.from({ length: TOTAL_SLIDES }).map((_, i) => (
           <button
             key={i}
             onClick={() => go(i)}
             aria-label={`Go to slide ${i + 1}`}
-            className="group relative flex items-center justify-center py-2"
+            className="group flex items-center gap-3"
           >
             <div className={`
-              rounded-full transition-all duration-700 ease-out
+              rounded-full transition-all duration-500 ease-out
               ${active === i
-                ? "w-[6px] h-8 " + (isLightSlide ? 'bg-[#1a3fd8]' : 'bg-white')
-                : "w-[6px] h-[6px] " + (isLightSlide ? 'bg-black/10 group-hover:bg-black/30' : 'bg-white/20 group-hover:bg-white/50')
+                ? `w-[6px] h-7 ${isLightSlide ? 'bg-[#1a3fd8]' : 'bg-white'}`
+                : `w-[6px] h-[6px] ${isLightSlide ? 'bg-black/15 group-hover:bg-black/40' : 'bg-white/30 group-hover:bg-white/60'}`
               }`
             }/>
-            {active === i && (
-               <motion.span 
-                 layoutId="active-dot-label"
-                 className={`absolute right-10 text-[10px] font-mono tracking-widest whitespace-nowrap hidden md:block ${isLightSlide ? 'text-[#1a3fd8]' : 'text-white/60'}`}
-               >
-                 {String(i + 1).padStart(2, '0')}
-               </motion.span>
-            )}
           </button>
         ))}
       </div>
 
-      <div className={`fixed bottom-8 left-10 z-50 flex items-center gap-6 transition-colors duration-1000 ${isLightSlide ? 'text-black/30' : 'text-white/40'}`}>
-        <div className="font-mono text-[12px] tracking-[0.2em]">
-          {String(active + 1).padStart(2, "0")} <span className="mx-2">/</span> {TOTAL_SLIDES}
-        </div>
-        <div className={`h-[1px] w-24 relative overflow-hidden ${isLightSlide ? 'bg-black/5' : 'bg-white/10'}`}>
-           <motion.div 
-             className={`absolute inset-y-0 left-0 ${isLightSlide ? 'bg-[#1a3fd8]' : 'bg-white'}`}
-             initial={{ width: "0%" }}
-             animate={{ width: String(((active + 1) / TOTAL_SLIDES) * 100) + "%" }}
-             transition={{ duration: 1, ease }}
-           />
-        </div>
+      {/* Slide counter */}
+      <div className={`fixed bottom-6 left-8 z-50 font-mono text-[11px] tracking-[0.2em] transition-colors duration-1000 ${isLightSlide ? 'text-black/30' : 'text-white/40'}`}>
+        {String(active + 1).padStart(2, "0")} / {TOTAL_SLIDES}
       </div>
 
-      <div className="fixed top-8 left-10 z-50">
-        <span className={`text-[16px] font-bold tracking-tight transition-colors duration-1000 ${isLightSlide ? 'text-black/90' : 'text-white/95'}`}>
+      {/* Wordmark */}
+      <div className="fixed top-7 left-8 z-50">
+        <span className={`text-[15px] font-semibold tracking-tight transition-colors duration-1000 ${isLightSlide ? 'text-black/80' : 'text-white/90'}`}>
           convo<span className={`transition-colors duration-1000 ${isLightSlide ? 'text-[#1a3fd8]' : 'text-white'}`}>bridge</span>
         </span>
       </div>
@@ -215,133 +200,141 @@ export default function PitchDeck() {
           initial="enter"
           animate="center"
           exit="exit"
-          className="absolute inset-0 flex items-center justify-center px-6"
+          className="absolute inset-0 flex items-center justify-center"
         >
           {active === 0 && <S_Title />}
           {active === 1 && <S_Problem />}
           {active === 2 && <S_Solution />}
-          {active === 3 && <S_Platform />}
-          {active === 4 && <S_Product />}
-          {active === 5 && <S_Verticals />}
-          {active === 6 && <S_Traction />}
-          {active === 7 && <S_Pricing />}
-          {active === 8 && <S_Roadmap />}
-          {active === 9 && <S_Competitive />}
-          {active === 10 && <S_Closing />}
+          {active === 3 && <S_Product />}
+          {active === 4 && <S_Verticals />}
+          {active === 5 && <S_Traction />}
+          {active === 6 && <S_Pricing />}
+          {active === 7 && <S_Roadmap />}
+          {active === 8 && <S_Competitive />}
+          {active === 9 && <S_Closing />}
         </motion.div>
       </AnimatePresence>
     </div>
   );
 }
 
+// ═══════════════════════════════════════════════════════════
+//  SLIDE 1 — TITLE
+// ═══════════════════════════════════════════════════════════
 function S_Title() {
   return (
-    <div className="w-full max-w-[1200px] mx-auto flex flex-col items-center text-center">
-      <Fade delay={0.2} y={15}>
-        <p className="text-[12px] font-bold tracking-[0.4em] uppercase text-[#1a3fd8] mb-12 flex items-center gap-4">
-           <span className="w-8 h-[1px] bg-[#1a3fd8]/30" />
-           Seed Round 2026
-           <span className="w-8 h-[1px] bg-[#1a3fd8]/30" />
-        </p>
+    <div className="w-full max-w-[1200px] mx-auto px-8 flex flex-col items-center text-center">
+      <Fade delay={0.2}>
+        <p className="text-[11px] font-semibold tracking-[0.35em] uppercase text-black/40 mb-10">Seed Round — March 2026</p>
       </Fade>
 
-      <div className="mb-12 text-black">
+      <div className="mb-10">
         <RevealText delay={0.3}>
-          <h1 className="text-[clamp(4.5rem,14vw,11rem)] font-[900] leading-[0.85] tracking-[-0.05em]">
-            The Voice<br/>
-            <span className="text-[#1a3fd8]">Infrastructure.</span>
+          <h1 className="text-[clamp(4rem,12vw,10rem)] font-[750] leading-[0.9] tracking-[-0.04em] text-black/90">
+            Convo<span className="text-[#1a3fd8]">Bridge</span>
           </h1>
         </RevealText>
       </div>
 
-      <Fade delay={0.7} y={20}>
-        <p className="text-[clamp(1.2rem,2.5vw,1.8rem)] font-medium text-black/40 leading-relaxed max-w-[700px]">
-          Natively multilingual AI agents that connect every business to every customer on Earth. In real-time.
+      <Fade delay={0.7}>
+        <p className="text-[clamp(1.1rem,2.2vw,1.6rem)] font-light text-black/45 leading-relaxed max-w-[600px]">
+          AI voice agents that speak every language.<br/>Natively. In real-time.
         </p>
       </Fade>
 
-      <Fade delay={1} className="mt-20">
-        <div className="flex items-center gap-8 py-4 px-8 bg-white border border-black/5 rounded-full shadow-[0_4px_20px_-10px_rgba(0,0,0,0.05)] text-black/40">
-           <span className="text-[12px] font-mono tracking-[0.1em]">convobridge.in</span>
-           <div className="w-[1px] h-4 bg-black/10" />
-           <span className="text-[12px] font-mono tracking-[0.1em]">contact@convobridge.in</span>
+      <Fade delay={1} className="mt-16">
+        <p className="text-[12px] tracking-[0.25em] text-black/30 font-medium">contact@convobridge.in</p>
+      </Fade>
+
+      {/* Decorative line */}
+      <motion.div
+        initial={{ scaleX: 0 }}
+        animate={{ scaleX: 1 }}
+        transition={{ duration: 1.5, delay: 0.9, ease }}
+        className="w-[120px] h-[1px] bg-black/10 mt-12 origin-center"
+      />
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════
+//  SLIDE 2 — THE PROBLEM
+// ═══════════════════════════════════════════════════════════
+function S_Problem() {
+  const count = useCounter(5000, 2200);
+
+  return (
+    <div className="w-full max-w-[1200px] mx-auto px-8">
+      <Fade delay={0.1}>
+        <p className="text-[11px] font-semibold tracking-[0.35em] uppercase text-red-500/70 mb-8">The Problem</p>
+      </Fade>
+
+      <RevealText delay={0.2}>
+        <h2 className="text-[clamp(2.8rem,7vw,5.5rem)] font-[750] leading-[1] tracking-[-0.03em] text-black/90 mb-6">
+          Global enterprise<br/>is bleeding.
+        </h2>
+      </RevealText>
+
+      <Fade delay={0.6} className="mt-14 flex flex-col md:flex-row gap-16 items-start">
+        <div className="flex-1">
+          <div className="flex items-baseline gap-1 mb-6">
+            <span className="text-[clamp(3rem,6vw,5rem)] font-[800] tracking-[-0.03em] text-red-500/90">
+              ₹{count.toLocaleString()}
+            </span>
+            <span className="text-[clamp(1.2rem,2.5vw,2rem)] font-light text-red-500/60 ml-2">Cr / year</span>
+          </div>
+          <p className="text-[18px] leading-[1.75] text-black/50 max-w-[480px]">
+            Hospitality sector annual loss from broken voice interactions — agent attrition, mistranslation, and dropped handoffs compound into systemic failure with no fix in sight.
+          </p>
+        </div>
+
+        <div className="flex-1">
+          <div className="border-l-[2px] border-black/8 pl-8">
+            <p className="text-[22px] font-[600] leading-[1.5] text-black/75 mb-4">
+              Contact center agents quit at record rates.
+            </p>
+            <p className="text-[16px] leading-[1.8] text-black/40">
+              Unsupported multilingual load — no tooling, no relief, no path forward. Each departure resets the cost clock.
+            </p>
+          </div>
         </div>
       </Fade>
     </div>
   );
 }
 
-function S_Problem() {
-  const count = useCounter(5000, 2500);
-  return (
-    <div className="w-full max-w-[1200px] mx-auto">
-      <Fade delay={0.1}>
-        <p className="text-[12px] font-bold tracking-[0.3em] uppercase text-red-500/80 mb-10">THE GAP</p>
-      </Fade>
-      <RevealText delay={0.2}>
-        <h2 className="text-[clamp(3rem,8vw,6rem)] font-[900] leading-[0.95] tracking-[-0.04em] text-black mb-8">
-          Silence is<br/>expensive.
-        </h2>
-      </RevealText>
-      <div className="mt-20 grid md:grid-cols-2 gap-24 items-start">
-        <Fade delay={0.6}>
-          <div className="relative text-red-500">
-             <div className="flex items-baseline gap-2 mb-8">
-               <span className="text-[clamp(4rem,7vw,6.5rem)] font-[900] tracking-[-0.03em]">
-                 ₹{count.toLocaleString()}
-               </span>
-               <span className="text-[clamp(1.5rem,3vw,2.5rem)] font-bold opacity-40">Cr</span>
-             </div>
-             <p className="text-[22px] leading-[1.6] text-black/60 font-medium">
-               Annual operational leakage in global hospitality due to broken multilingual support.
-             </p>
-          </div>
-        </Fade>
-        <Fade delay={0.8}>
-          <div className="space-y-16">
-            <div className="border-l-[3px] border-black/5 pl-10">
-              <h4 className="text-[24px] font-[800] text-black/80 mb-4 tracking-[-0.02em]">80% Agent Attrition</h4>
-              <p className="text-[18px] leading-[1.7] text-black/40 font-medium">
-                Voice support is the most stressful job. The burnout is systemic, not situational.
-              </p>
-            </div>
-            <div className="border-l-[3px] border-black/5 pl-10">
-              <h4 className="text-[24px] font-[800] text-black/80 mb-4 tracking-[-0.02em]">Multilingual Chaos</h4>
-              <p className="text-[18px] leading-[1.7] text-black/40 font-medium">
-                Nuance is lost in translation. Real trust requires native modeling.
-              </p>
-            </div>
-          </div>
-        </Fade>
-      </div>
-    </div>
-  );
-}
-
+// ═══════════════════════════════════════════════════════════
+//  SLIDE 3 — THE SOLUTION
+// ═══════════════════════════════════════════════════════════
 function S_Solution() {
   const pillars = [
-    { num: "01", title: "Connect", desc: "Native API hooks that plug into any legacy stack in seconds, not months." },
-    { num: "02", title: "Configure", desc: "Domain-specific fine-tuning for hospitality, healthcare, and education." },
-    { num: "03", title: "Converse", desc: "40+ natively trained language models. Sub-300ms global latency." },
-    { num: "04", title: "Convert", desc: "Continuous improvement loop that turns every call into refined training data." },
+    { num: "01", title: "Connect", desc: "REST-API integration. No infrastructure replacement. Plug into any legacy stack in days." },
+    { num: "02", title: "Configure", desc: "Domain-trained AI agents for hospitality and education. 95% accuracy out of the box." },
+    { num: "03", title: "Converse", desc: "40+ natively modeled languages. Not translated — natively trained. Sub-300ms latency." },
+    { num: "04", title: "Convert", desc: "Every call logged, billed, fed back into the model. A continuous improvement loop." },
   ];
+
   return (
-    <div className="w-full max-w-[1200px] mx-auto">
+    <div className="w-full max-w-[1200px] mx-auto px-8">
       <Fade delay={0.1}>
-        <p className="text-[12px] font-bold tracking-[0.3em] uppercase text-[#1a3fd8]/80 mb-10">THE BRIDGE</p>
+        <p className="text-[11px] font-semibold tracking-[0.35em] uppercase text-[#1a3fd8]/60 mb-8">The Solution</p>
       </Fade>
+
       <RevealText delay={0.2}>
-        <h2 className="text-[clamp(3rem,8vw,6rem)] font-[900] leading-[0.95] tracking-[-0.04em] text-black mb-20">
-          Intelligence,<br/>uninterrupted.
+        <h2 className="text-[clamp(2.8rem,7vw,5rem)] font-[750] leading-[1] tracking-[-0.03em] text-black/90 mb-16">
+          Four steps to live.
         </h2>
       </RevealText>
-      <div className="grid md:grid-cols-4 gap-8">
+
+      <div className="space-y-0">
         {pillars.map((p, i) => (
-          <Fade key={i} delay={0.4 + i * 0.1} y={20}>
-            <div className="group h-full p-8 bg-white border border-black/5 rounded-3xl hover:border-[#1a3fd8]/20 hover:shadow-[0_20px_40px_-20px_rgba(26,63,216,0.15)] transition-all duration-700">
-               <span className="text-[14px] font-mono text-[#1a3fd8]/30 mb-8 block">{p.num}</span>
-               <h3 className="text-[28px] font-[800] tracking-[-0.03em] text-black/90 mb-4 group-hover:text-[#1a3fd8] transition-colors duration-500">{p.title}</h3>
-               <p className="text-[16px] leading-[1.65] text-black/40 font-medium">{p.desc}</p>
+          <Fade key={i} delay={0.4 + i * 0.12}>
+            <div className="group flex items-start gap-8 py-8 border-t border-black/6 last:border-b hover:bg-black/[0.015] transition-colors duration-500 px-4 -mx-4 rounded-lg cursor-default">
+              <span className="text-[13px] font-mono text-[#1a3fd8]/40 pt-2 shrink-0 w-6">{p.num}</span>
+              <h3 className="text-[clamp(1.8rem,4vw,2.8rem)] font-[700] tracking-[-0.02em] text-black/85 w-[260px] shrink-0 group-hover:text-[#1a3fd8] transition-colors duration-500">
+                {p.title}
+              </h3>
+              <p className="text-[16px] leading-[1.8] text-black/40 pt-2 max-w-[400px]">{p.desc}</p>
             </div>
           </Fade>
         ))}
@@ -350,107 +343,37 @@ function S_Solution() {
   );
 }
 
-function S_Platform() {
-  return (
-    <div className="w-full max-w-[1200px] mx-auto">
-      <div className="flex flex-col md:flex-row gap-20 items-center">
-        <div className="flex-1">
-          <Fade delay={0.1}>
-            <p className="text-[12px] font-bold tracking-[0.3em] uppercase text-[#1a3fd8]/80 mb-10">THE PLATFORM</p>
-          </Fade>
-          <RevealText delay={0.2}>
-            <h2 className="text-[clamp(2.5rem,6vw,5rem)] font-[900] leading-[0.95] tracking-[-0.04em] text-black mb-10">
-              One link.<br/>
-              <span className="text-[#1a3fd8]">Every app.</span>
-            </h2>
-          </RevealText>
-          <Fade delay={0.6}>
-            <p className="text-[20px] leading-[1.7] text-black/50 font-medium mb-12 max-w-[500px]">
-              We abstracted Voice AI into a configuration layer. Deploy in minutes with ~5 clicks.
-            </p>
-          </Fade>
-          <div className="space-y-6">
-            <Fade delay={0.8} y={10}>
-               <div className="flex items-center gap-6 p-6 bg-[#1a3fd8]/[0.03] border border-[#1a3fd8]/10 rounded-2xl">
-                  <div className="w-12 h-12 rounded-full bg-[#1a3fd8] text-white flex items-center justify-center font-bold text-xl shadow-[0_4px_12px_rgba(26,63,216,0.3)]">5</div>
-                  <div>
-                    <h4 className="text-[18px] font-bold text-black/80">Clicks to Configure</h4>
-                    <p className="text-[14px] text-black/40 font-medium">Define voice, language, and knowledge base.</p>
-                  </div>
-               </div>
-            </Fade>
-            <Fade delay={0.9} y={10}>
-               <div className="flex items-center gap-6 p-6 bg-green-500/[0.03] border border-green-500/10 rounded-2xl">
-                  <div className="w-12 h-12 rounded-full bg-green-500 text-white flex items-center justify-center font-bold text-xl shadow-[0_4px_12px_rgba(34,197,94,0.3)]">1</div>
-                  <div>
-                    <h4 className="text-[18px] font-bold text-black/80">Link to Integrate</h4>
-                    <p className="text-[14px] text-black/40 font-medium">JS snippet or direct API endpoint.</p>
-                  </div>
-               </div>
-            </Fade>
-          </div>
-        </div>
-        <div className="flex-1 w-full max-w-[500px]">
-          <Fade delay={0.5} y={40}>
-            <div className="aspect-[4/5] bg-white border border-black/5 rounded-[40px] shadow-[0_40px_100px_-20px_rgba(0,0,0,0.12)] p-10 relative overflow-hidden">
-               <div className="space-y-8">
-                  <div className="flex justify-between items-center">
-                    <div className="w-24 h-4 bg-black/5 rounded-full" />
-                    <div className="w-8 h-8 rounded-full bg-black/5" />
-                  </div>
-                  <div className="space-y-6">
-                    <div className="w-full h-12 bg-black/[0.02] rounded-xl flex items-center px-4">
-                       <div className="w-32 h-3 bg-[#1a3fd8]/20 rounded-full" />
-                    </div>
-                    <div className="w-full h-12 bg-black/[0.02] rounded-xl flex items-center px-4">
-                       <div className="w-48 h-3 bg-black/5 rounded-full" />
-                    </div>
-                  </div>
-                  <div className="pt-8 grid grid-cols-2 gap-4">
-                     {['🌍', '🎙️', '📚', '🚀'].map((emoji, i) => (
-                        <div key={i} className="aspect-square bg-black/[0.03] rounded-2xl border border-black/5 flex items-center justify-center text-2xl">
-                          {emoji}
-                        </div>
-                     ))}
-                  </div>
-                  <div className="pt-8 w-full h-16 bg-[#1a3fd8] rounded-2xl flex items-center justify-center text-white font-bold tracking-tight shadow-[0_10px_30px_-5px_rgba(26,63,216,0.3)]">
-                    Go Live
-                  </div>
-               </div>
-            </div>
-          </Fade>
-        </div>
-      </div>
-    </div>
-  );
-}
-
+// ═══════════════════════════════════════════════════════════
+//  SLIDE 4 — PRODUCT
+// ═══════════════════════════════════════════════════════════
 function S_Product() {
   return (
-    <div className="w-full max-w-[1200px] mx-auto">
+    <div className="w-full max-w-[1200px] mx-auto px-8">
       <Fade delay={0.1}>
-        <p className="text-[12px] font-bold tracking-[0.3em] uppercase text-[#1a3fd8]/80 mb-10">THE MOAT</p>
+        <p className="text-[11px] font-semibold tracking-[0.35em] uppercase text-[#1a3fd8]/60 mb-8">Production-Ready</p>
       </Fade>
+
       <RevealText delay={0.2}>
-        <h2 className="text-[clamp(3rem,8vw,6rem)] font-[900] leading-[0.95] tracking-[-0.04em] text-black mb-20">
-          Native stacks,<br/>global reach.
+        <h2 className="text-[clamp(2.5rem,6vw,4.5rem)] font-[750] leading-[1.05] tracking-[-0.03em] text-black/90 mb-20">
+          The multilingual moat<br/>is live.
         </h2>
       </RevealText>
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-5">
         {[
-          { label: "Native Voices", stat: "40+", unit: "langs", detail: "Modeling from first principles." },
-          { label: "Latency", stat: "280", unit: "ms", detail: "Fastest globally modeled voice stack." },
-          { label: "Data Mastery", stat: "100", unit: "%", detail: "Real-time analysis on all calls." },
-          { label: "Deployment", stat: "10", unit: "min", detail: "Configuration to global live state." },
+          { label: "Native Voice Stack", stat: "40+", unit: "languages", detail: "French, Arabic, Hindi, Malayalam. Natively modeled — not synthesized from English." },
+          { label: "Response Latency", stat: "<300", unit: "ms", detail: "Indistinguishable from human response time. Real-time speech-to-speech at scale." },
+          { label: "Domain Accuracy", stat: "95", unit: "%", detail: "Hospitality and education. Trained on vertical-specific dialogue — not generic corpus data." },
+          { label: "Integration", stat: "REST", unit: "API", detail: "Plug into Salesforce, SAP, or a legacy PBX without a single infrastructure change." },
         ].map((card, i) => (
           <Fade key={i} delay={0.4 + i * 0.1}>
-            <div className="bg-white border border-black/5 rounded-[32px] p-8">
-              <p className="text-[11px] font-bold tracking-[0.2em] uppercase text-black/30 mb-8">{card.label}</p>
-              <div className="flex items-baseline gap-2 mb-6 text-black">
-                <span className="text-[3.5rem] font-[900] tracking-[-0.05em]">{card.stat}</span>
-                <span className="text-[16px] font-bold opacity-20">{card.unit}</span>
+            <div className="group bg-white border border-black/[0.06] rounded-2xl p-7 hover:shadow-[0_8px_40px_-12px_rgba(26,63,216,0.12)] hover:border-[#1a3fd8]/15 transition-all duration-600">
+              <p className="text-[11px] font-semibold tracking-[0.2em] uppercase text-black/30 mb-6">{card.label}</p>
+              <div className="flex items-baseline gap-1 mb-5">
+                <span className="text-[2.8rem] font-[800] tracking-[-0.04em] text-black/85 group-hover:text-[#1a3fd8] transition-colors duration-500">{card.stat}</span>
+                <span className="text-[14px] font-medium text-black/30">{card.unit}</span>
               </div>
-              <p className="text-[14px] leading-[1.6] text-black/40 font-medium">{card.detail}</p>
+              <p className="text-[13px] leading-[1.7] text-black/35">{card.detail}</p>
             </div>
           </Fade>
         ))}
@@ -459,212 +382,357 @@ function S_Product() {
   );
 }
 
+// ═══════════════════════════════════════════════════════════
+//  SLIDE 5 — VERTICALS
+// ═══════════════════════════════════════════════════════════
 function S_Verticals() {
   return (
-    <div className="w-full max-w-[1200px] mx-auto">
+    <div className="w-full max-w-[1200px] mx-auto px-8">
       <Fade delay={0.1}>
-        <p className="text-[12px] font-bold tracking-[0.3em] uppercase text-[#1a3fd8]/80 mb-10">THE DEPTH</p>
+        <p className="text-[11px] font-semibold tracking-[0.35em] uppercase text-[#1a3fd8]/60 mb-8">Vertical Focus</p>
       </Fade>
-      <RevealText delay={0.2}>
-        <h2 className="text-[clamp(3rem,8vw,6rem)] font-[900] leading-[0.95] tracking-[-0.04em] text-black mb-20">
-          Two verticals.<br/>Infinite scale.
-        </h2>
-      </RevealText>
-      <div className="grid md:grid-cols-2 gap-10">
-        <Fade delay={0.5} y={30}>
-          <div className="bg-white border border-black/5 rounded-[40px] p-12">
-            <h3 className="text-[32px] font-[900] tracking-[-0.03em] text-black mb-6">Hospitality</h3>
-            <p className="text-[18px] leading-[1.7] text-black/40 font-medium mb-12">
-              Concierge AI that handles room service nuance and local dialect complaints natively.
-            </p>
-            <div className="flex gap-4">
-              {["Oracle", "Amadeus"].map(t => (
-                <span key={t} className="px-5 py-2 rounded-full border border-black/5 text-[12px] font-bold text-black/30 uppercase tracking-widest">{t}</span>
-              ))}
-            </div>
-          </div>
-        </Fade>
-        <Fade delay={0.7} y={30}>
-          <div className="bg-white border border-black/5 rounded-[40px] p-12 border-green-500/10">
-            <h3 className="text-[32px] font-[900] tracking-[-0.03em] text-black mb-6">Education</h3>
-            <p className="text-[18px] leading-[1.7] text-black/40 font-medium mb-12">
-              Handling student intake in regional dialects with sub-zero hallucination.
-            </p>
-            <div className="flex">
-               <span className="px-6 py-3 rounded-full bg-green-500 text-white text-[12px] font-bold tracking-widest uppercase flex items-center gap-3">
-                 <span className="w-2 h-2 rounded-full bg-white animate-pulse" />
-                 LIVE @ Nilgiri College
-               </span>
-            </div>
-          </div>
-        </Fade>
-      </div>
-    </div>
-  );
-}
 
-function S_Traction() {
-  return (
-    <div className="w-full max-w-[1200px] mx-auto">
-      <Fade delay={0.1}>
-        <p className="text-[12px] font-bold tracking-[0.3em] uppercase text-[#1a3fd8]/80 mb-10">THE PROOF</p>
-      </Fade>
       <RevealText delay={0.2}>
-        <h2 className="text-[clamp(3.5rem,8vw,6rem)] font-[900] leading-[0.95] tracking-[-0.04em] text-black mb-20">
-          Live in<br/><span className="text-[#1a3fd8]">Production.</span>
-        </h2>
-      </RevealText>
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-        {[
-          { label: "MARKET STATUS", value: "LIVE", sub: "Production active.", accent: true },
-          { label: "PIPELINE", value: "1 EOI", sub: "Enterprise scale hospitality." },
-          { label: "ONBOARDING", value: "₹50K", sub: "Setup fee per unit." },
-          { label: "SUBSCRIPTION", value: "₹10K", sub: "Core recurring." },
-        ].map((m, i) => (
-          <Fade key={i} delay={0.4 + i * 0.1}>
-            <div className={`rounded-[40px] p-10 flex flex-col justify-between min-h-[280px] ${m.accent ? 'bg-[#1a3fd8] text-white shadow-[0_40px_80px_-20px_rgba(26,63,216,0.3)]' : 'bg-white border border-black/5'}`}>
-              <p className={`text-[11px] font-bold tracking-[0.25em] uppercase ${m.accent ? 'text-white/40' : 'text-black/30'}`}>{m.label}</p>
-              <div>
-                <p className={`text-[2.5rem] font-[900] tracking-[-0.05em] mb-4 ${m.accent ? 'text-white' : 'text-black'}`}>{m.value}</p>
-                <p className={`text-[14px] font-medium leading-[1.5] ${m.accent ? 'text-white/50' : 'text-black/40'}`}>{m.sub}</p>
-              </div>
-            </div>
-          </Fade>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function S_Pricing() {
-  return (
-    <div className="w-full max-w-[1200px] mx-auto text-center">
-      <Fade delay={0.1}>
-        <p className="text-[12px] font-bold tracking-[0.3em] uppercase text-[#1a3fd8]/80 mb-10">THE UNIT ECONOMICS</p>
-      </Fade>
-      <RevealText delay={0.2}>
-        <h2 className="text-[clamp(3rem,8vw,6rem)] font-[900] leading-[0.95] tracking-[-0.04em] text-black mb-20">
-          Built to<br/>scale.
-        </h2>
-      </RevealText>
-      <div className="grid md:grid-cols-3 gap-8 text-left">
-        {[
-          { tier: "Setup", val: "₹50K", sub: "One-time per integration." },
-          { tier: "Platform", val: "₹10K", sub: "Recurring monthly fee.", highlight: true },
-          { tier: "Activity", val: "₹10", sub: "Per successful interaction." },
-        ].map((t, i) => (
-          <Fade key={i} delay={0.4 + i * 0.1}>
-             <div className={`p-10 rounded-[40px] border ${t.highlight ? 'bg-[#1a3fd8] text-white border-transparent shadow-[0_40px_80px_-20px_rgba(26,63,216,0.3)]' : 'bg-white border-black/5'}`}>
-                <p className={`text-[11px] font-bold tracking-[0.25em] uppercase mb-12 ${t.highlight ? 'text-white/40' : 'text-black/30'}`}>{t.tier}</p>
-                <h3 className="text-[4rem] font-[900] tracking-[-0.05em] mb-4 leading-none">{t.val}</h3>
-                <p className={`text-[15px] font-medium ${t.highlight ? 'text-white/60' : 'text-black/40'}`}>{t.sub}</p>
-             </div>
-          </Fade>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function S_Roadmap() {
-  const steps = [
-    { year: "2026", step: "01", title: "Foundation", desc: "40+ native language Fine-Tuning." },
-    { year: "2026", step: "02", title: "Scale", desc: "5 Enterprise contracts across India." },
-    { year: "2027", step: "03", title: "Compliance", desc: "Sovereign AI for Europe readiness." },
-    { year: "2027", step: "04", title: "Series A", desc: "₹1.5 Cr ARR benchmark achieved." },
-  ];
-  return (
-    <div className="w-full max-w-[1200px] mx-auto">
-      <RevealText delay={0.2}>
-        <h2 className="text-[clamp(3.5rem,8.5vw,6.5rem)] font-[900] leading-[0.9] tracking-[-0.05em] text-black mb-24">
-          Velocity with<br/>intent.
-        </h2>
-      </RevealText>
-      <div className="relative">
-        <div className="absolute top-0 left-0 w-full h-[2px] bg-black/5" />
-        <div className="grid grid-cols-4 gap-12 pt-16">
-          {steps.map((s, i) => (
-            <Fade key={i} delay={0.6 + i * 0.15}>
-               <div className="relative">
-                  <div className={`absolute -top-[71px] left-0 w-4 h-4 rounded-full ${i === 0 ? 'bg-[#1a3fd8]' : 'bg-black/10'}`} />
-                  <p className="text-[12px] font-mono text-[#1a3fd8] mb-4">{s.year} &bull; {s.step}</p>
-                  <h4 className="text-[26px] font-[900] tracking-[-0.02em] text-black/90 mb-6">{s.title}</h4>
-                  <p className="text-[16px] leading-[1.6] text-black/40 font-medium">{s.desc}</p>
-               </div>
-            </Fade>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function S_Competitive() {
-  return (
-    <div className="w-full max-w-[1200px] mx-auto">
-      <RevealText delay={0.2}>
-        <h2 className="text-[clamp(3rem,8vw,6rem)] font-[900] leading-[0.95] tracking-[-0.04em] text-black mb-20">
-          The Language<br/><span className="text-[#1a3fd8]">Moat.</span>
+        <h2 className="text-[clamp(2.5rem,6vw,4.5rem)] font-[750] leading-[1.05] tracking-[-0.03em] text-black/90 mb-6">
+          Two verticals.<br/>Precision-engineered.
         </h2>
       </RevealText>
       <Fade delay={0.5}>
-        <div className="bg-white border border-black/5 rounded-[48px] overflow-hidden">
-          <div className="grid grid-cols-4 px-12 py-10 border-b border-black/5 bg-black/[0.01] text-[12px] font-bold tracking-[0.2em] uppercase">
-            <span className="text-black/30">FEATURE</span>
-            <span className="text-[#1a3fd8]">CONVOBRIDGE</span>
-            <span className="text-black/30">VAPI</span>
-            <span className="text-black/30">REPLICANT</span>
-          </div>
-          {[
-            { tag: "Modeling", cb: "Native 40+", vapi: "Aggregated", rep: "English First" },
-            { tag: "Market", cb: "Global South", vapi: "US Enterprise", rep: "Global North" },
-            { tag: "Price", cb: "Mass Market", vapi: "Enterprise", rep: "Contract" },
-          ].map((r, i) => (
-            <div key={i} className="grid grid-cols-4 px-12 py-10 border-b border-black/[0.03] last:border-0 font-bold">
-               <span className="text-black/50">{r.tag}</span>
-               <span className="text-[#1a3fd8]">✓ {r.cb}</span>
-               <span className="text-black/30">{r.vapi}</span>
-               <span className="text-black/30">{r.rep}</span>
+        <p className="text-[18px] text-black/40 leading-[1.75] mb-16 max-w-[550px]">Built for the sectors where language barriers cost the most.</p>
+      </Fade>
+
+      <div className="grid md:grid-cols-2 gap-6">
+        <Fade delay={0.5}>
+          <div className="bg-white border border-black/[0.06] rounded-2xl p-10 hover:shadow-[0_8px_40px_-12px_rgba(0,0,0,0.08)] transition-all duration-500 group">
+            <div className="flex items-center gap-4 mb-6">
+              <div className="w-10 h-10 rounded-xl bg-[#1a3fd8]/8 flex items-center justify-center">
+                <span className="text-[18px]">🏨</span>
+              </div>
+              <h3 className="text-[28px] font-[700] tracking-[-0.02em] text-black/85">Hospitality</h3>
             </div>
-          ))}
+            <p className="text-[16px] leading-[1.75] text-black/45 mb-8">
+              24/7 concierge AI in 40+ languages. Handles bookings, complaints, and room service natively.
+            </p>
+            <div className="flex gap-3 flex-wrap">
+              {["Oracle PMS", "Amadeus", "Booking Engine"].map(t => (
+                <span key={t} className="px-3 py-1.5 rounded-full bg-black/[0.03] text-[11px] font-semibold tracking-[0.1em] text-black/40 uppercase">{t}</span>
+              ))}
+            </div>
+          </div>
+        </Fade>
+
+        <Fade delay={0.65}>
+          <div className="bg-white border border-black/[0.06] rounded-2xl p-10 hover:shadow-[0_8px_40px_-12px_rgba(0,0,0,0.08)] transition-all duration-500 group">
+            <div className="flex items-center gap-4 mb-6">
+              <div className="w-10 h-10 rounded-xl bg-green-500/8 flex items-center justify-center">
+                <span className="text-[18px]">🎓</span>
+              </div>
+              <h3 className="text-[28px] font-[700] tracking-[-0.02em] text-black/85">Education</h3>
+            </div>
+            <p className="text-[16px] leading-[1.75] text-black/45 mb-8">
+              Student inquiry handling in regional languages. 95% domain accuracy on curriculum and enrollment queries.
+            </p>
+            <div className="flex gap-3 flex-wrap">
+              <span className="px-3 py-1.5 rounded-full bg-green-500/8 text-[11px] font-semibold tracking-[0.1em] text-green-700/60 uppercase flex items-center gap-1.5">
+                <span className="w-[5px] h-[5px] rounded-full bg-green-500 animate-pulse" />
+                Live — Nilgiri College
+              </span>
+            </div>
+          </div>
+        </Fade>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════
+//  SLIDE 6 — TRACTION
+// ═══════════════════════════════════════════════════════════
+function S_Traction() {
+  return (
+    <div className="w-full max-w-[1200px] mx-auto px-8">
+      <Fade delay={0.1}>
+        <p className="text-[11px] font-semibold tracking-[0.35em] uppercase text-[#1a3fd8]/60 mb-8">Traction — March 2026</p>
+      </Fade>
+
+      <RevealText delay={0.2}>
+        <h2 className="text-[clamp(2.5rem,6vw,4.5rem)] font-[750] leading-[1.05] tracking-[-0.03em] text-black/90 mb-20">
+          Live in production.
+        </h2>
+      </RevealText>
+
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-5">
+        {[
+          { label: "Status", value: "LIVE", sub: "Nilgiri College, Coimbatore", accent: true },
+          { label: "Pipeline", value: "1 EOI", sub: "Expression of Interest received" },
+          { label: "Onboarding", value: "₹50K", sub: "Contract value per integration" },
+          { label: "Subscription", value: "₹9.9K", sub: "Monthly recurring per account" },
+        ].map((m, i) => (
+          <Fade key={i} delay={0.4 + i * 0.1}>
+            <div className={`
+              rounded-2xl p-8 flex flex-col justify-between min-h-[220px]
+              ${m.accent
+                ? 'bg-[#1a3fd8] text-white'
+                : 'bg-white border border-black/[0.06]'
+              }
+            `}>
+              <p className={`text-[11px] font-semibold tracking-[0.2em] uppercase ${m.accent ? 'text-white/50' : 'text-black/30'}`}>{m.label}</p>
+              <div>
+                <p className={`text-[clamp(1.8rem,3.5vw,2.5rem)] font-[800] tracking-[-0.03em] mb-2 ${m.accent ? 'text-white' : 'text-black/85'}`}>{m.value}</p>
+                <p className={`text-[13px] leading-[1.5] ${m.accent ? 'text-white/60' : 'text-black/35'}`}>{m.sub}</p>
+              </div>
+            </div>
+          </Fade>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════
+//  SLIDE 7 — PRICING
+// ═══════════════════════════════════════════════════════════
+function S_Pricing() {
+  return (
+    <div className="w-full max-w-[1200px] mx-auto px-8">
+      <RevealText delay={0.2}>
+        <h2 className="text-[clamp(2.8rem,7vw,5rem)] font-[750] leading-[1] tracking-[-0.03em] text-black/90 mb-4">Pricing</h2>
+      </RevealText>
+      <Fade delay={0.4}>
+        <p className="text-[18px] text-black/40 mb-16">Built for compounding. Every tier unlocks the next.</p>
+      </Fade>
+
+      <div className="grid md:grid-cols-3 gap-6 mb-12">
+        {[
+          {
+            tier: "Setup", price: "₹50,000", unit: "one-time", highlight: false,
+            points: ["Full platform integration", "Domain-specific model training", "Voice profile configuration", "Onboarding and go-live support"],
+            tagline: "Pay once, run forever."
+          },
+          {
+            tier: "Subscription", price: "₹9,999", unit: "/ month", highlight: true,
+            points: ["Full platform & dashboard access", "Continuous model updates", "Analytics and call reporting", "Predictable revenue base"],
+            tagline: "The primary engine."
+          },
+          {
+            tier: "Usage", price: "₹10", unit: "/ successful call", highlight: false,
+            points: ["Billed only on successful calls", "Zero charge on failed/dropped", "Trust-aligned — pay for outcomes", "Scales with client volume"],
+            tagline: "Pure upside. Zero risk."
+          },
+        ].map((t, i) => (
+          <Fade key={i} delay={0.5 + i * 0.1}>
+            <div className={`
+              rounded-2xl p-8 flex flex-col h-full
+              ${t.highlight
+                ? 'bg-[#1a3fd8] text-white shadow-[0_16px_60px_-12px_rgba(26,63,216,0.35)]'
+                : 'bg-white border border-black/[0.06]'
+              }
+            `}>
+              <p className={`text-[11px] font-semibold tracking-[0.2em] uppercase mb-5 ${t.highlight ? 'text-white/50' : 'text-black/30'}`}>{t.tier}</p>
+              <div className="flex items-baseline gap-2 mb-2">
+                <span className={`text-[2rem] font-[800] tracking-[-0.03em] ${t.highlight ? 'text-white' : 'text-black/85'}`}>{t.price}</span>
+                <span className={`text-[13px] font-medium ${t.highlight ? 'text-white/50' : 'text-black/30'}`}>{t.unit}</span>
+              </div>
+              <p className={`text-[13px] mb-7 ${t.highlight ? 'text-white/50' : 'text-black/35'}`}>{t.tagline}</p>
+              <div className={`w-full h-[1px] mb-6 ${t.highlight ? 'bg-white/15' : 'bg-black/6'}`} />
+              <ul className="space-y-3 flex-1">
+                {t.points.map((p, j) => (
+                  <li key={j} className={`text-[13px] flex items-start gap-3 ${t.highlight ? 'text-white/70' : 'text-black/45'}`}>
+                    <span className={`mt-1.5 w-[4px] h-[4px] rounded-full shrink-0 ${t.highlight ? 'bg-white/40' : 'bg-[#1a3fd8]/40'}`} />
+                    {p}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </Fade>
+        ))}
+      </div>
+
+      <Fade delay={0.9}>
+        <div className="text-center py-5 border-t border-black/6">
+          <p className="text-[14px] text-black/40">
+            At 200 calls/day per client — Year 1 ARR: <span className="font-[700] text-black/70">₹1.2 Cr</span>
+            <span className="mx-3 text-black/15">|</span>
+            Year 2 with 10 clients: <span className="font-[700] text-[#1a3fd8]">₹6 Cr+</span>
+          </p>
         </div>
       </Fade>
     </div>
   );
 }
 
+// ═══════════════════════════════════════════════════════════
+//  SLIDE 8 — ROADMAP
+// ═══════════════════════════════════════════════════════════
+function S_Roadmap() {
+  const phases = [
+    { time: "Now", label: "Phase 1", items: ["Nilgiri College live — platform in production", "First Expression of Interest received", "40+ language voice stack stable"] },
+    { time: "Q2–Q3 2026", label: "Growth", items: ["5 enterprise clients signed", "GCC market entry — UAE and KSA", "Arabic and English vertical deepened"] },
+    { time: "Q4 2026", label: "Compliance", items: ["GDPR and EU AI Act compliant", "French and Dutch sovereign AI readiness", "Compliance-first, infrastructure-light"] },
+    { time: "Q1–Q2 2027", label: "Series A", items: ["₹1.2 Cr ARR achieved", "20+ enterprise clients across 3 regions", "Series A prep initiated"] },
+  ];
+
+  return (
+    <div className="w-full max-w-[1200px] mx-auto px-8">
+      <RevealText delay={0.2}>
+        <h2 className="text-[clamp(2.5rem,6vw,4.5rem)] font-[750] leading-[1.05] tracking-[-0.03em] text-black/90 mb-20">
+          From first deployment<br/>to Series A.
+        </h2>
+      </RevealText>
+
+      {/* Timeline bar */}
+      <div className="relative">
+        <motion.div
+          initial={{ scaleX: 0 }}
+          animate={{ scaleX: 1 }}
+          transition={{ duration: 1.5, delay: 0.4, ease }}
+          className="absolute top-0 left-0 right-0 h-[1px] bg-black/10 origin-left"
+        />
+
+        <div className="grid grid-cols-4 gap-6 pt-10">
+          {phases.map((p, i) => (
+            <Fade key={i} delay={0.5 + i * 0.12}>
+              <div className="relative">
+                {/* Dot on timeline */}
+                <motion.div
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  transition={{ delay: 0.6 + i * 0.15, ...springConfig }}
+                  className={`absolute -top-10 left-0 w-[8px] h-[8px] rounded-full ${i === 0 ? 'bg-[#1a3fd8]' : 'bg-black/15'}`}
+                />
+                <p className={`text-[12px] font-semibold tracking-[0.15em] uppercase mb-2 ${i === 0 ? 'text-[#1a3fd8]' : 'text-black/30'}`}>{p.time}</p>
+                <h3 className="text-[22px] font-[700] tracking-[-0.01em] text-black/80 mb-5">{p.label}</h3>
+                <ul className="space-y-3">
+                  {p.items.map((item, j) => (
+                    <li key={j} className="text-[13px] leading-[1.6] text-black/40 flex items-start gap-2.5">
+                      <span className="mt-[7px] w-[3px] h-[3px] rounded-full bg-black/15 shrink-0" />
+                      {item}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </Fade>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════
+//  SLIDE 9 — COMPETITIVE
+// ═══════════════════════════════════════════════════════════
+function S_Competitive() {
+  const rows = [
+    { feature: "Language coverage", cb: "40+ natively modeled", vapi: "Multiple supported", rep: "English + limited" },
+    { feature: "Target market", cb: "India, GCC, EU mid-market", vapi: "US enterprise only", rep: "US enterprise only" },
+    { feature: "Entry pricing", cb: "₹9,999/mo", vapi: "$300+/mo USD", rep: "Enterprise contract" },
+    { feature: "Agent latency", cb: "Sub-300ms native", vapi: "~800ms", rep: "~500ms" },
+  ];
+
+  return (
+    <div className="w-full max-w-[1200px] mx-auto px-8">
+      <RevealText delay={0.2}>
+        <h2 className="text-[clamp(2.5rem,6vw,4.5rem)] font-[750] leading-[1.05] tracking-[-0.03em] text-black/90 mb-4">
+          Why ConvoBridge wins.
+        </h2>
+      </RevealText>
+      <Fade delay={0.4}>
+        <p className="text-[18px] text-black/40 mb-16">US-centric platforms weren't built for this.</p>
+      </Fade>
+
+      <Fade delay={0.5}>
+        <div className="bg-white border border-black/[0.06] rounded-2xl overflow-hidden">
+          {/* Header */}
+          <div className="grid grid-cols-4 gap-4 px-8 py-5 border-b border-black/[0.04]">
+            <span className="text-[11px] font-semibold tracking-[0.2em] uppercase text-black/25">Feature</span>
+            <span className="text-[11px] font-semibold tracking-[0.2em] uppercase text-[#1a3fd8]/60">ConvoBridge</span>
+            <span className="text-[11px] font-semibold tracking-[0.2em] uppercase text-black/25">Vapi</span>
+            <span className="text-[11px] font-semibold tracking-[0.2em] uppercase text-black/25">Replicant</span>
+          </div>
+
+          {rows.map((r, i) => (
+            <Fade key={i} delay={0.55 + i * 0.08} y={10}>
+              <div className="grid grid-cols-4 gap-4 px-8 py-6 border-b border-black/[0.03] last:border-0 hover:bg-[#1a3fd8]/[0.015] transition-colors duration-400">
+                <span className="text-[14px] font-[600] text-black/60">{r.feature}</span>
+                <span className="text-[14px] font-[600] text-[#1a3fd8]">
+                  <span className="mr-1.5">✓</span>{r.cb}
+                </span>
+                <span className="text-[13px] text-black/30 flex items-center gap-1.5">
+                  <span className="text-red-400/60">✕</span>{r.vapi}
+                </span>
+                <span className="text-[13px] text-black/30 flex items-center gap-1.5">
+                  <span className="text-red-400/60">✕</span>{r.rep}
+                </span>
+              </div>
+            </Fade>
+          ))}
+        </div>
+      </Fade>
+
+      <Fade delay={1}>
+        <p className="text-center text-[14px] text-black/30 mt-10 italic">
+          "Democratizing AI access — even kirana stores can leverage AI."
+        </p>
+      </Fade>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════
+//  SLIDE 10 — CLOSING / THE ASK  (blue background)
+// ═══════════════════════════════════════════════════════════
 function S_Closing() {
   return (
-    <div className="w-full max-w-[1200px] mx-auto text-white px-10">
-      <div className="flex flex-col md:flex-row gap-20 items-end">
+    <div className="w-full max-w-[1200px] mx-auto px-8 text-white">
+      <div className="flex flex-col md:flex-row gap-16 items-start">
         <div className="flex-1">
           <Fade delay={0.1}>
-            <p className="text-[12px] font-bold tracking-[0.3em] uppercase text-white/40 mb-10">THE CAPITAL</p>
+            <p className="text-[11px] font-semibold tracking-[0.35em] uppercase text-white/35 mb-8">The Ask</p>
           </Fade>
+
           <RevealText delay={0.2}>
-            <h2 className="text-[clamp(3.5rem,8vw,7rem)] font-[900] leading-[0.85] tracking-[-0.05em] mb-16">
-              Fund the<br/>Bridge.
+            <h2 className="text-[clamp(2.8rem,7vw,5rem)] font-[750] leading-[1] tracking-[-0.03em] text-white mb-12">
+              Closing the<br/>seed round.
             </h2>
           </RevealText>
-          <Fade delay={0.5}>
-            <h3 className="text-[5rem] font-[900] tracking-[-0.04em] mb-4 leading-none">₹50 Cr</h3>
-            <p className="text-[12px] font-bold tracking-[0.3em] uppercase text-white/30">SEED ROUND &bull; 2026</p>
+
+          <Fade delay={0.6}>
+            <div className="inline-block">
+              <p className="text-[clamp(3rem,8vw,5.5rem)] font-[800] tracking-[-0.04em] text-white">₹50 Cr</p>
+              <p className="text-[13px] tracking-[0.2em] uppercase text-white/35 font-semibold mt-2">Seed Round — March 2026</p>
+            </div>
           </Fade>
         </div>
-        <div className="flex-1 space-y-12 pb-10">
-           <Stagger stagger={0.12} delay={0.6}>
-              {[
-                { title: "Native Excellence", desc: "Accelerate fine-tuning for Malayalam, Arabic, and regional Indian dialects." },
-                { title: "GCC Deployment", desc: "Scale dedicated infrastructure hubs in UAE and KSA for data sovereignty." },
-                { title: "The Enterprise Layer", desc: "Build out the '5-Click' self-serve dashboard for global mid-market SaaS." }
-              ].map(item => (
-                <div key={item.title} className="border-l border-white/10 pl-10">
-                   <h4 className="text-[24px] font-extrabold mb-3">{item.title}</h4>
-                   <p className="text-[16px] leading-[1.7] text-white/40 font-medium">{item.desc}</p>
-                   <div className="h-1 w-12 bg-white/10 rounded-full mt-4" />
+
+        <div className="flex-1 pt-8">
+          <Fade delay={0.5}>
+            <p className="text-[11px] font-semibold tracking-[0.25em] uppercase text-white/30 mb-10">Use of Funds</p>
+          </Fade>
+
+          <Stagger stagger={0.1} delay={0.6} className="space-y-10">
+            {[
+              { num: "01", title: "Engineering depth", desc: "Expand the core voice model team. Accelerate Arabic, Malayalam, and next-tier language fine-tuning." },
+              { num: "02", title: "GCC market expansion", desc: "10 new hospitality and education enterprise contracts in UAE and KSA within 18 months." },
+              { num: "03", title: "Compliance infrastructure", desc: "GDPR and EU AI Act certification. Sovereign AI compliance layer — no physical European presence required." },
+            ].map((item) => (
+              <div key={item.num} className="flex gap-6">
+                <span className="text-[14px] font-mono text-white/20 pt-1 shrink-0">{item.num}</span>
+                <div>
+                  <h4 className="text-[22px] font-[700] text-white/90 mb-2">{item.title}</h4>
+                  <p className="text-[14px] leading-[1.75] text-white/45">{item.desc}</p>
                 </div>
-              ))}
-           </Stagger>
+              </div>
+            ))}
+          </Stagger>
+
+          <Fade delay={1.2}>
+            <div className="mt-14 pt-8 border-t border-white/10">
+              <p className="text-[13px] text-white/35 tracking-[0.1em]">
+                contact@convobridge.in &nbsp;·&nbsp; Seed Round &nbsp;·&nbsp; ₹50 Cr &nbsp;·&nbsp; March 2026
+              </p>
+            </div>
+          </Fade>
         </div>
       </div>
     </div>
