@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence, useMotionValue, useTransform } from "framer-motion";
-import { Globe } from "@/components/ui/globe";
 
 // ─────────────────────────────────────────────────────────────
 //  CONVOBRIDGE — PITCH DECK
@@ -224,11 +223,7 @@ export default function PitchDeck() {
 // ═══════════════════════════════════════════════════════════
 function S_Title() {
   return (
-    <div className="w-full max-w-[1200px] mx-auto px-8 flex flex-col items-center text-center relative">
-      <div className="absolute inset-0 -z-10 flex items-center justify-center opacity-[0.4] pointer-events-none">
-        <Globe className="w-[800px] h-[800px] translate-y-32" />
-      </div>
-
+    <div className="w-full max-w-[1200px] mx-auto px-8 flex flex-col items-center text-center">
       <Fade delay={0.2}>
         <p className="text-[11px] font-semibold tracking-[0.35em] uppercase text-black/40 mb-10">Seed Round — March 2026</p>
       </Fade>
@@ -732,28 +727,10 @@ function S_Closing() {
           </Stagger>
 
           <Fade delay={1.2}>
-            <div className="mt-14 pt-8 border-t border-white/10 flex flex-col md:flex-row gap-8 items-center">
-              <div className="p-4 bg-white/5 border border-white/10 rounded-xl backdrop-blur-sm">
-                <p className="text-[11px] text-white/40 mb-0.5">Strategic Raise</p>
-                <p className="text-xl font-bold">₹1-5 Cr</p>
-              </div>
-              <div className="p-4 bg-white/5 border border-white/10 rounded-xl backdrop-blur-sm">
-                <p className="text-[11px] text-white/40 mb-0.5">Valuation</p>
-                <p className="text-xl font-bold">₹20 Cr</p>
-              </div>
-              <div className="p-4 bg-white/10 border border-white/20 rounded-xl backdrop-blur-sm">
-                <p className="text-[11px] text-white/40 mb-0.5">Equity</p>
-                <p className="text-xl font-bold text-blue-400">2-5%</p>
-              </div>
-              <div className="ml-auto text-right">
-                <p className="text-[13px] font-medium mb-1 text-white/70">Ready to anchor?</p>
-                <a 
-                  href="/investment-terms" 
-                  className="text-[10px] font-semibold tracking-widest uppercase text-blue-400 hover:text-blue-300 transition-colors border-b border-blue-400/30 pb-0.5"
-                >
-                  View Formal Term Sheet →
-                </a>
-              </div>
+            <div className="mt-14 pt-8 border-t border-white/10">
+              <p className="text-[13px] text-white/35 tracking-[0.1em]">
+                contact@convobridge.in &nbsp;·&nbsp; Seed Round &nbsp;·&nbsp; ₹50 Cr &nbsp;·&nbsp; March 2026
+              </p>
             </div>
           </Fade>
         </div>

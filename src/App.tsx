@@ -23,7 +23,6 @@ import Settings from "./pages/Settings";
 import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
 import PitchDeck from "./pages/PitchDeck";
-import InvestmentTermSheet from "./pages/InvestmentTermSheet";
 
 const queryClient = new QueryClient();
 
@@ -62,7 +61,6 @@ const App = () => {
               <Route path="/dashboard/agents/new" element={<ProtectedRoute><AgentBuilder /></ProtectedRoute>} />
               <Route path="/dashboard/agents/edit/:id" element={<ProtectedRoute><AgentBuilder /></ProtectedRoute>} />
               <Route path="/pitch" element={<PitchDeck />} />
-              <Route path="/investment-terms" element={<InvestmentTermSheet />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </AuthProvider>
