@@ -82,13 +82,15 @@ export default function Settings() {
     }
   };
 
-  const loadAgents = async () => {
+  const loadAgents = async (currentSelectedId?: string | null) => {
     try {
       setFetchingPrompt(true);
       const res = await apiClient.getAgents();
       const agentList = res.agents || [];
       setAgents(agentList);
-      if (agentList.length > 0 && !selectedAgentId) {
+      // Only auto-select first agent if nothing is selected yet
+      const activeId = currentSelectedId ?? selectedAgentId;
+      if (agentList.length > 0 && !activeId) {
         selectAgent(agentList[0]);
       }
     } catch (err) {
@@ -117,9 +119,10 @@ export default function Settings() {
         voice: voiceName,
       });
       toast({ title: 'Agent updated successfully', description: `Voice: ${voiceName} • Prompt saved` });
-      loadAgents(); // Refresh list
-    } catch (err) {
-      toast({ title: 'Failed to save agent', variant: 'destructive' });
+      // Refresh agent list but keep current selection — pass current ID to avoid reset
+      loadAgents(selectedAgentId);
+    } catch (err: any) {
+      toast({ title: 'Failed to save agent', description: err?.message || 'Please try again', variant: 'destructive' });
     } finally {
       setSaving(false);
     }

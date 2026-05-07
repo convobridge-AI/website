@@ -1607,8 +1607,10 @@ export default function Dashboard() {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="none">No Agent (Fallback)</SelectItem>
-                        {agents.filter(a => a.is_deployed).map((a: any) => (
-                          <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>
+                        {agents.map((a: any) => (
+                          <SelectItem key={a.id} value={a.id}>
+                            {a.name}{a.is_deployed ? ' ✓' : ' (draft)'}
+                          </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
