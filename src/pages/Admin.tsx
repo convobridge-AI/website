@@ -43,6 +43,8 @@ export default function Admin() {
   const [addingNumber, setAddingNumber] = useState(false);
   const [allAgents, setAllAgents] = useState<any[]>([]);
   const [agentsLoading, setAgentsLoading] = useState(false);
+  const [contacts, setContacts] = useState<any[]>([]);
+  const [contactsLoading, setContactsLoading] = useState(false);
 
   const loadData = async () => {
     setLoading(true);
@@ -87,7 +89,19 @@ export default function Admin() {
     }
   };
 
-  useEffect(() => { loadData(); loadDids(); loadAgents(); }, []);
+  const loadContacts = async () => {
+    setContactsLoading(true);
+    try {
+      const res = await apiClient.getContacts();
+      setContacts(res.contacts || []);
+    } catch (err: any) {
+      toast({ title: 'Error loading contacts', description: err.message, variant: 'destructive' });
+    } finally {
+      setContactsLoading(false);
+    }
+  };
+
+  useEffect(() => { loadData(); loadDids(); loadAgents(); loadContacts(); }, []);
 
   const handleAgentDelete = async (id: string, name: string) => {
     if (!window.confirm(`Are you sure you want to delete "${name}"? This action cannot be undone.`)) return;
@@ -156,6 +170,16 @@ export default function Admin() {
       toast({ title: 'Failed to add number', description: err.message, variant: 'destructive' });
     } finally {
       setAddingNumber(false);
+    }
+  };
+
+  const handleContactStatusUpdate = async (id: string, status: string) => {
+    try {
+      await apiClient.updateContactStatus(id, status);
+      toast({ title: 'Status Updated', description: `Inquiry marked as ${status}` });
+      loadContacts();
+    } catch (err: any) {
+      toast({ title: 'Update failed', description: err.message, variant: 'destructive' });
     }
   };
 
@@ -548,6 +572,80 @@ export default function Admin() {
                         <SelectContent>
                           <SelectItem value="">Unassigned</SelectItem>
                           {companies.map(c => <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* ── Contact Inquiries ────────────────────────────────────────── */}
+      <Card className="stripe-card overflow-hidden">
+        <CardHeader className="border-b bg-gray-50/50 p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2"><Users className="h-5 w-5 text-primary" /> Contact Inquiries</CardTitle>
+              <CardDescription>Messages from potential customers and demo requests.</CardDescription>
+            </div>
+            <p className="text-sm font-medium text-muted-foreground">{contacts.length} Inquiries</p>
+          </div>
+        </CardHeader>
+        <CardContent className="p-0">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-gray-50/50 text-caption font-semibold text-muted-foreground border-b border-gray-100">
+                  <th className="px-6 py-4">Sender</th>
+                  <th className="px-6 py-4">Company</th>
+                  <th className="px-6 py-4">Message</th>
+                  <th className="px-6 py-4">Status</th>
+                  <th className="px-6 py-4 text-right">Action</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {contactsLoading ? (
+                  <tr><td colSpan={5} className="px-6 py-8 text-center"><Loader2 className="h-5 w-5 animate-spin mx-auto" /></td></tr>
+                ) : contacts.length === 0 ? (
+                  <tr><td colSpan={5} className="px-6 py-12 text-center text-muted-foreground italic">No inquiries received yet.</td></tr>
+                ) : contacts.map((contact) => (
+                  <tr key={contact.id} className="hover:bg-gray-50/50 transition-colors">
+                    <td className="px-6 py-4">
+                      <div>
+                        <p className="text-body font-medium">{contact.name}</p>
+                        <p className="text-caption text-muted-foreground">{contact.email}</p>
+                        <p className="text-[10px] text-muted-foreground mt-1">{new Date(contact.created_at).toLocaleString()}</p>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className="text-sm">{contact.company || '—'}</span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <p className="text-xs text-muted-foreground max-w-xs line-clamp-2" title={contact.message}>{contact.message}</p>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] uppercase font-bold ${
+                        contact.status === 'pending' ? 'bg-orange-50 text-orange-700' : 
+                        contact.status === 'contacted' ? 'bg-blue-50 text-blue-700' : 'bg-green-50 text-green-700'
+                      }`}>
+                        {contact.status}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <Select 
+                        defaultValue={contact.status}
+                        onValueChange={(val) => handleContactStatusUpdate(contact.id, val)}
+                      >
+                        <SelectTrigger className="w-32 h-8 text-xs ml-auto">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="pending">Pending</SelectItem>
+                          <SelectItem value="contacted">Contacted</SelectItem>
+                          <SelectItem value="resolved">Resolved</SelectItem>
                         </SelectContent>
                       </Select>
                     </td>

@@ -41,12 +41,12 @@ export default function Home() {
               </p>
 
               <div className="flex flex-wrap gap-3">
-                <Button size="lg" className="rounded-xl text-base px-6 holo-border holo-glow">
-                  Start Free Trial
+                <Button size="lg" className="rounded-xl text-base px-6 holo-border holo-glow" onClick={() => window.location.href = '/login'}>
+                  Login
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
-                <Button size="lg" variant="outline" className="rounded-xl text-base px-6 border-primary/20 bg-primary/5 hover:bg-primary/10 hover:border-primary/30 text-foreground">
-                  Watch Demo
+                <Button size="lg" variant="outline" className="rounded-xl text-base px-6 border-primary/20 bg-primary/5 hover:bg-primary/10 hover:border-primary/30 text-foreground" onClick={() => window.location.href = '/contact-us'}>
+                  Sign Up
                 </Button>
               </div>
 
@@ -189,8 +189,8 @@ export default function Home() {
             <p className="text-body-large text-muted-foreground mb-10 max-w-lg mx-auto">
               Join hundreds of businesses using ConvoBridge to scale customer communication.
             </p>
-            <Button size="lg" className="rounded-xl text-base px-8 bg-primary text-primary-foreground hover:brightness-110 shadow-[0_0_30px_-5px_hsla(217,91%,50%,0.3)]">
-              Start Free Trial
+            <Button size="lg" className="rounded-xl text-base px-8 bg-primary text-primary-foreground hover:brightness-110 shadow-[0_0_30px_-5px_hsla(217,91%,50%,0.3)]" onClick={() => window.location.href = '/login'}>
+              Get Started
               <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
           </div>

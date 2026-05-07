@@ -366,15 +366,36 @@ class APIClient {
 
   // Contacts
   async submitContact(contactData: any) {
-    return { success: true };
+    const { data, error } = await supabase
+      .from('contact_inquiries')
+      .insert([contactData])
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return { inquiry: data };
   }
 
-  async getContacts(query?: any) {
-    return { contacts: [] };
+  async getContacts() {
+    const { data, error } = await supabase
+      .from('contact_inquiries')
+      .select('*')
+      .order('created_at', { ascending: false });
+    
+    if (error) throw error;
+    return { contacts: data || [] };
   }
 
   async updateContactStatus(id: string, status: string) {
-    return { success: true };
+    const { data, error } = await supabase
+      .from('contact_inquiries')
+      .update({ status, updated_at: new Date().toISOString() })
+      .eq('id', id)
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return { inquiry: data };
   }
 
   // Leads
