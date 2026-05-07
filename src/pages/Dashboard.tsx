@@ -1526,7 +1526,15 @@ export default function Dashboard() {
                 <Music className="h-4 w-4 text-primary" />
                 Fallback Voice
               </label>
-              <Select value={stats?.company?.voice || "Kore"} onValueChange={(val) => apiClient.updateCompany(stats.company.id, { voice: val }).then(refresh)}>
+              <Select value={stats?.company?.voice || "Kore"} onValueChange={async (val) => {
+                try {
+                  await apiClient.updateCompany(stats.company.id, { voice: val });
+                  toast.success(`Fallback voice updated to ${val}`);
+                  refresh();
+                } catch (err: any) {
+                  toast.error(err?.message || 'Failed to update voice');
+                }
+              }}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>

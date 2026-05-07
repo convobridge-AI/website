@@ -252,6 +252,18 @@ class APIClient {
     return { number: updated };
   }
 
+  async updateCompany(id: string, data: any) {
+    const { data: updated, error } = await supabase
+      .from('companies')
+      .update(data)
+      .eq('id', id)
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return { company: updated };
+  }
+
   async deleteNumber(id: string) {
     const { error } = await supabase
       .from('phone_numbers')
