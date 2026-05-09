@@ -1526,6 +1526,7 @@ export default function Dashboard() {
                 <Music className="h-4 w-4 text-primary" />
                 Fallback Voice
               </label>
+              <p className="text-xs text-muted-foreground mb-1">Used when no agent is assigned to a DID</p>
               <Select value={stats?.company?.voice || "Kore"} onValueChange={async (val) => {
                 try {
                   await apiClient.updateCompany(stats.company.id, { voice: val });
